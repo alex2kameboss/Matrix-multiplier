@@ -41,4 +41,4 @@ output  pready,
         prdata,
 );
 
-endinterface //apb
+endinterface
