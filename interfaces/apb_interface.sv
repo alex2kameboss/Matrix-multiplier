@@ -35,7 +35,7 @@ input   pclk,
         pwrite,
         pwdata,
 output  pready,
-        prdata,
+        prdata
 );
 
 endinterface
