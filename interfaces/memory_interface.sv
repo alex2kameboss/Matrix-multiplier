@@ -7,7 +7,7 @@ logic               req;
 logic               ack;
 logic               w_en;
 logic   [15 : 0]    addr;
-logic   [256 : 0]   data;
+wire   [256 : 0]   data;
 
 modport master (
 input   clk,
