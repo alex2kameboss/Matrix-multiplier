@@ -1,16 +1,13 @@
-interface memory_interface #(
-    parameter DATA_WIDTH = 256,
-    parameter ADDR_WIDTH = 16
-) (
+interface memory_interface (
     input   clk,
     input   reset_n
 );
     
-logic                           req;
-logic                           ack;
-logic                           w_en;
-logic   [ADDR_WIDTH - 1 : 0]    addr;
-logic   [DATA_WIDTH - 1 : 0]    data;
+logic               req;
+logic               ack;
+logic               w_en;
+logic   [15 : 0]    addr;
+logic   [256 : 0]   data;
 
 modport master (
 input   clk,
