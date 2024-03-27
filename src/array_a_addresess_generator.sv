@@ -1,4 +1,4 @@
-module a_addresses_generator #(
+module array_a_addresses_generator #(
     parameter   ARRAY_HEIGHT            =   4,
     parameter   ARRAY_WIDTH             =   4,
     parameter   BUFFER_ADDRESS_WIDTH    =   10
