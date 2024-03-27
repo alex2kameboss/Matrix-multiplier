@@ -1,7 +1,7 @@
 module mem_a_addresses_generator #(
     parameter   BUS_WIDTH_BYTES         =   32,
     parameter   DATA_WIDTH_BYTES        =   1,
-    parameter   MEM_DATA_WIDTH_BYTES    =   32
+    parameter   ARRAY_HEIGHT            =   4
 ) (
     // generic signals
     input                               clk,
@@ -21,7 +21,7 @@ module mem_a_addresses_generator #(
 localparam ELEMENTS = BUS_WIDTH_BYTES / DATA_WIDTH_BYTES;
 
 reg     [15 : 0]    a_next_addr, a_start_row_index, a_column_index, rows, cols;
-reg     [$clog2(MEM_DATA_WIDTH_BYTES) : 0] a_cycles;
+reg     [$clog2(ARRAY_HEIGHT) : 0] a_cycles;
 
 enum bit[1: 0] { IDL, PUT_ADDR, INCR_BASE, SKIP_ROWS } a_state, a_next_state;
 
@@ -29,9 +29,9 @@ wire     [15 : 0]    a_row_addr_step, a_rows_incr, column_step;
 
 logic a_store_data, a_incr_col, a_incr_base, a_cycles_done, a_send_addr, a_store_new_col, a_store_new_row, a_end;
 
-assign a_cycles_done = a_cycles == MEM_DATA_WIDTH_BYTES;
+assign a_cycles_done = a_cycles == ARRAY_HEIGHT;
 assign a_row_addr_step = n << $clog2(DATA_WIDTH_BYTES);
-assign a_rows_incr = a_row_addr_step << $clog2(MEM_DATA_WIDTH_BYTES);
+assign a_rows_incr = a_row_addr_step << $clog2(ARRAY_HEIGHT);
 
 // a output signals
 // fifo addresses
@@ -133,6 +133,6 @@ always_ff @(posedge clk or negedge reset_n)
 always_ff @(posedge clk or negedge reset_n)
     if ( ~reset_n )         rows <= 'd0;                            else
     if ( a_store_data )     rows <= 'd0;                            else
-    if ( a_incr_base )      rows <= rows + MEM_DATA_WIDTH_BYTES;
+    if ( a_incr_base )      rows <= rows + ARRAY_HEIGHT;
 
 endmodule

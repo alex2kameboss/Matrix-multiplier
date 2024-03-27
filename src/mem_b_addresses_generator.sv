@@ -9,7 +9,6 @@ module mem_b_addresses_generator #(
     // start signal from config module
     input                               start_i,
     // arrays paramaeters
-    input       [15 : 0]                m,
     input       [15 : 0]                n,
     input       [15 : 0]                p,
     input       [15 : 0]                base_addr_b,
@@ -21,15 +20,14 @@ module mem_b_addresses_generator #(
 
 localparam ELEMENTS = MEM_DATA_WIDTH_BYTES / DATA_WIDTH_BYTES;
 
-reg     [15 : 0]    b_start_index, b_next_addr, rows, cols, b_cycles;
-wire    [15 : 0]    b_row_step, b_array_repeat;
+reg     [15 : 0]    b_start_index, b_next_addr, rows, cols;
+wire    [15 : 0]    b_row_step;
 
-logic   b_store_data, b_send_addr, b_skip_col, b_end, b_matrix_end, b_store_row, b_repeat;
+logic   b_store_data, b_send_addr, b_skip_col, b_end, b_matrix_end, b_store_row;
 
-enum bit[1 : 0] { IDL, PUT_ADDR, INCR_COL, REPEAT } b_state, b_next_state;
+enum bit[1 : 0] { IDL, PUT_ADDR, INCR_COL } b_state, b_next_state;
 
 assign b_row_step = p << $clog2(DATA_WIDTH_BYTES);
-assign b_array_repeat = m >> $clog2(ELEMENTS);
 
 // b output signals
 // fifo addresses
@@ -57,7 +55,6 @@ always_comb begin
     b_store_row = 1'b0;
     b_end = 1'b0;
     b_matrix_end = 1'b0;
-    b_repeat = 1'b0;
 
     case (b_state)
         IDL : begin
@@ -77,20 +74,11 @@ always_comb begin
         end 
         INCR_COL : begin
             if ( cols == p ) begin
-                b_next_state = REPEAT;
-                b_matrix_end = 1'b1;
-            end else begin
-                b_next_state = PUT_ADDR;
-                b_store_row = 1'b1;
-            end
-        end
-        REPEAT : begin
-            if ( b_cycles == b_array_repeat ) begin
                 b_next_state = IDL;
                 b_end = 1'b1;
             end else begin
                 b_next_state = PUT_ADDR;
-                b_repeat = 1'b1;
+                b_store_row = 1'b1;
             end
         end
     endcase
@@ -99,19 +87,12 @@ end
 // counters
 
 always_ff @(posedge clk or negedge reset_n)
-    if ( ~reset_n )         b_cycles <= 'd0;                        else
-    if ( b_store_data )     b_cycles <= 'd0;                        else
-    if ( b_repeat )         b_cycles <= b_cycles + 'd1;
-
-always_ff @(posedge clk or negedge reset_n)
     if ( ~reset_n )         b_start_index <= 'd0;                   else
-    if ( b_repeat )         b_start_index <= base_addr_b;           else
     if ( b_store_data )     b_start_index <= base_addr_b;           else
     if ( b_skip_col )       b_start_index <= b_start_index + ELEMENTS;
 
 always_ff @(posedge clk or negedge reset_n)
     if ( ~reset_n )         b_next_addr <= 'd0;                     else
-    if ( b_repeat )         b_next_addr <= base_addr_b;             else
     if ( b_store_data )     b_next_addr <= base_addr_b;             else
     if ( b_store_row )      b_next_addr <= b_start_index;           else
     if ( b_send_addr )      b_next_addr <= b_next_addr + b_row_step; 
@@ -120,13 +101,11 @@ always_ff @(posedge clk or negedge reset_n)
 
 always_ff @(posedge clk or negedge reset_n)
     if ( ~reset_n )         cols <= 'd0;                            else
-    if ( b_repeat )         cols <= 'd0;                            else
     if ( b_store_data )     cols <= 'd0;                            else
     if ( b_skip_col )       cols <= cols + ELEMENTS;
 
 always_ff @(posedge clk or negedge reset_n)
     if ( ~reset_n )         rows <= 'd0;                            else
-    if ( b_repeat )         rows <= 'd0;                            else
     if ( b_store_data )     rows <= 'd0;                            else
     if ( b_send_addr )      rows <= rows + 'd1;                     else
     if ( b_skip_col )       rows <= 'd0;
