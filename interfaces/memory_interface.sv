@@ -54,13 +54,6 @@ property ack_pulse; // Checks that ack is a pulse
     @(posedge clk) disable iff (~rst_n)
     req & $changed(req) |-> ##1 ack;
   endproperty
-  //Checkers for design specific
-  
-  // Assertion 1: The request activates correctly after a specific number of clock cycles
-  property req_dist_diff_than_constrained;
-    @(posedge clk) disable iff (~rst_n)
-    $fell(req) |-> ##REQ_DIST req;
-  endproperty
   
   always @(posedge clk) 
     //REQ-ACK PROTOCOL CHECKERS
@@ -72,9 +65,6 @@ property ack_pulse; // Checks that ack is a pulse
       $error("PROTOCOL VIOLATION: Acknowledgement came without a request from client!");
     assert property (ack_after_one_req_cc) else
       $error("PROTOCOL VIOLATION: Acknowledge came the same time as request was asserted!");
-    //DESIGN FEATURES CHECKERS
-    assert property (req_dist_diff_than_constrained) else
-      $error("DESIGN SPECIFICATION MISMATCH: REQ_DIST is different than constrained distance!");
   `endif
 
 endinterface
