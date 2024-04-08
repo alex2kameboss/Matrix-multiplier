@@ -1,20 +1,20 @@
 module array_a_addresses_generator #(
-    parameter   ARRAY_HEIGHT            =   4,
-    parameter   ARRAY_WIDTH             =   4,
+    parameter   ARRAY_HEIGHT            =   4   ,
+    parameter   ARRAY_WIDTH             =   4   ,
     parameter   BUFFER_ADDRESS_WIDTH    =   10
 ) (
     // generic signals
-    input                                       clk,
-    input                                       reset_n,
+    input                                       clk     ,
+    input                                       reset_n ,
     // start signal from config module
-    input                                       start_i,
+    input                                       start_i ,
     // arrays parameters
-    input       [15 : 0]                        m,
-    input       [15 : 0]                        n,
-    input       [15 : 0]                        p,
+    input       [15 : 0]                        m       ,
+    input       [15 : 0]                        n       ,
+    input       [15 : 0]                        p       ,
     // interface for memory read interface
-    output  reg [BUFFER_ADDRESS_WIDTH - 1 : 0]  a_addr,
-    output                                      done
+    output  reg [BUFFER_ADDRESS_WIDTH - 1 : 0]  a_addr  ,
+    output                                      done    
 );
 
 reg     [BUFFER_ADDRESS_WIDTH - 1 : 0]  start_addr;
@@ -24,7 +24,7 @@ wire    [15 : 0]                        repeat_lines, repeat_1, rows_limit;
 wire                                    col_limit, repeat_limit, next, work, start;
 reg                                     work_reg;
 
-assign repeat_lines = (p >> $clog2(ARRAY_WIDTH)) - 1'b1;
+assign repeat_lines = (p >> $clog2(ARRAY_WIDTH));
 assign rows_limit   = m >> $clog2(ARRAY_HEIGHT);
 assign limit_addr   = start_addr + n - 1'b1;
 assign col_limit    = a_addr == limit_addr;
@@ -58,6 +58,7 @@ always_ff @( posedge clk or negedge reset_n )
 always_ff @( posedge clk or negedge reset_n )
     if ( ~reset_n )                             a_addr <= 'd0;          else
     if ( start )                                a_addr <= 'd0;          else
+    if ( next )                                 a_addr <= plus_1;       else
     if ( col_limit )                            a_addr <= start_addr;   else
     if ( work_reg )                             a_addr <= plus_1;
 

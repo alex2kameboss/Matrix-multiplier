@@ -25,7 +25,7 @@ wire    [15 : 0]    b_row_step;
 
 logic   b_store_data, b_send_addr, b_skip_col, b_end, b_matrix_end, b_store_row;
 
-enum bit[1 : 0] { IDL, PUT_ADDR, INCR_COL } b_state, b_next_state;
+enum bit[1 : 0] { IDL, PUT_ADDR, WAIT_FULL, INCR_COL } b_state, b_next_state;
 
 assign b_row_step = p << $clog2(DATA_WIDTH_BYTES);
 
@@ -64,14 +64,17 @@ always_comb begin
             end
         end 
         PUT_ADDR : begin
-            if ( rows < n ) begin
-                b_next_state = PUT_ADDR;
-                b_send_addr = 1'b1;
-            end else begin
-                b_next_state = INCR_COL;
-                b_skip_col = 1'b1;
+            if ( ~b_fifo_full ) begin
+                if ( rows < n ) begin
+                    b_next_state = WAIT_FULL;
+                    b_send_addr = 1'b1;
+                end else begin
+                    b_next_state = INCR_COL;
+                    b_skip_col = 1'b1;
+                end
             end
         end 
+        WAIT_FULL: b_next_state = PUT_ADDR;
         INCR_COL : begin
             if ( cols == p ) begin
                 b_next_state = IDL;

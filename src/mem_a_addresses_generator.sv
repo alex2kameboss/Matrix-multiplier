@@ -23,7 +23,7 @@ localparam ELEMENTS = BUS_WIDTH_BYTES / DATA_WIDTH_BYTES;
 reg     [15 : 0]    a_next_addr, a_start_row_index, a_column_index, rows, cols;
 reg     [$clog2(ARRAY_HEIGHT) : 0] a_cycles;
 
-enum bit[1: 0] { IDL, PUT_ADDR, INCR_BASE, SKIP_ROWS } a_state, a_next_state;
+enum bit[2: 0] { IDL, PUT_ADDR, WAIT_FULL, INCR_BASE, SKIP_ROWS } a_state, a_next_state;
 
 wire     [15 : 0]    a_row_addr_step, a_rows_incr, column_step;
 
@@ -73,10 +73,11 @@ always_comb begin
                 a_next_state = INCR_BASE;
                 a_incr_col = 1'b1;
             end else if ( ~a_fifo_full ) begin
-                a_next_state = PUT_ADDR;
+                a_next_state = WAIT_FULL;
                 a_send_addr = 1'b1;
             end
         end
+        WAIT_FULL : a_next_state = PUT_ADDR; 
         INCR_BASE : begin
             if ( cols < n ) begin
                 a_next_state = PUT_ADDR;
