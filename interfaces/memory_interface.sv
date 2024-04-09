@@ -35,9 +35,14 @@ inout   data
 `ifdef ENABLE_ASSERTIONS
 //Checkers for req-ack protocol
 
-property ack_pulse; // Checks that ack is a pulse
+  property pr_generic_not_unknown (signal) 
+  @(posedge clk) disable iff(~reset_n)
+    !$isunknown(signal) ;
+  endproperty   
+
+  property ack_pulse; // Checks that ack is a pulse
     @(posedge clk) disable iff (~rst_n)
-    $rose(ack) |=> ##1 $fell(ack);
+    $rose(ack) |-> ##1 $fell(ack);
   endproperty
   
   property req_without_ack; // Request had no response from server side
@@ -58,13 +63,16 @@ property ack_pulse; // Checks that ack is a pulse
   always @(posedge clk) 
     //REQ-ACK PROTOCOL CHECKERS
     assert property (ack_pulse) else
-      $error("PROTOCOL VIOLATION: ack_pulse assertion failed! Acknowledgement signal isn't a pulse");
+      $error("[%0t] PROTOCOL VIOLATION: ack_pulse assertion failed! Acknowledgement signal isn't a pulse", $time);
     assert property (req_without_ack) else
-      $error("PROTOCOL VIOLATION: Next request came without an acknowledgement from server!");
+      $error("[%0t] PROTOCOL VIOLATION: Next request came without an acknowledgement from server!", $time);
     assert property (ack_without_req) else
-      $error("PROTOCOL VIOLATION: Acknowledgement came without a request from client!");
+      $error("[%0t] PROTOCOL VIOLATION: Acknowledgement came without a request from client!", $time);
     assert property (ack_after_one_req_cc) else
-      $error("PROTOCOL VIOLATION: Acknowledge came the same time as request was asserted!");
+      $error("[%0t] PROTOCOL VIOLATION: Acknowledge came the same time as request was asserted!", $time);
+    rst_never_X : assert property (pr_generic_not_unknown(reset_n)) else 
+      $error("[%0t] Error! reset_n is unknown (=X/Z)", $time);
+
   `endif
 
 endinterface
