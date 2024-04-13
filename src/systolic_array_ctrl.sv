@@ -32,7 +32,7 @@ module systolic_array_ctrl #(
     output  [BUFFER_ADDRESS_WIDTH - 1 : 0]  b_buffer_addr   ,
     // systolic_array_start
     output  reg                             array_start     ,
-    input                                   data_done     
+    input                                   data_done       
 );
     
 wire b_matrix_done;
@@ -85,7 +85,8 @@ buffer_write_address_generator #(.BUFFER_ADDRESS_WIDTH(BUFFER_ADDRESS_WIDTH)) a_
     .count_up(a_valid_data),
     .global_counts(a_count_addr),
     .address(a_buffer_addr),
-    .limit_pass(a_half_mem)
+    .limit_pass(a_half_mem),
+    .clear(data_done)
 );
 
 buffer_write_address_generator #(.BUFFER_ADDRESS_WIDTH(BUFFER_ADDRESS_WIDTH)) b_buf_addr_i (
@@ -95,11 +96,11 @@ buffer_write_address_generator #(.BUFFER_ADDRESS_WIDTH(BUFFER_ADDRESS_WIDTH)) b_
     .count_up(b_valid_data),
     .global_counts(b_count_addr),
     .address(b_buffer_addr),
-    .limit_pass(b_half_mem)
+    .limit_pass(b_half_mem),
+    .clear(data_done)
 );
 
 logic b_start_reg, a_start_reg;
-assign data_done = a_start_reg & b_start_reg;
 
 always_ff @(posedge clk or negedge reset_n)
     if ( ~reset_n )                 a_start_reg <= 1'b0;        else
@@ -113,8 +114,8 @@ always_ff @(posedge clk or negedge reset_n)
 
 always_ff @(posedge clk or negedge reset_n)
     if ( ~reset_n )                                                         array_start <= 1'b0;            else
-    if ( a_start_reg & b_start_reg )                                        array_start <= 1'b1;            else
-    if ( data_done )                                                        array_start <= 1'b0;
+    if ( data_done )                                                        array_start <= 1'b0;            else
+    if ( a_start_reg & b_start_reg )                                        array_start <= 1'b1;            
 
 mult #(.DATA_WIDTH(16)) mxn_mult (
     .a(m),

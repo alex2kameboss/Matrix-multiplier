@@ -32,9 +32,13 @@ localparam A_MEM_BANK_DATA_WIDTH    = ARRAY_HEIGHT * DATA_WIDTH_BYTES * 8;
 
 wire                                    start_array;
 wire                                    a_data_done, b_data_done;
+wire                                    array_done;
 reg start_array_d;
-always_ff @(posedge clk)
-    start_array_d <= start_array;
+
+always_ff @(posedge clk or negedge reset_n)
+    if ( ~reset_n )                     start_array_d <= 1'b0;      else
+    if ( array_done )                   start_array_d <= 1'b0;      else
+    if ( start_array )                  start_array_d <= 1'b1;            
 
 wire start_data;
 assign start_data = ~start_array_d & start_array;
@@ -135,7 +139,7 @@ array_a_addresses_generator #(
 // end for A matrix
 
 
-// for A matrix
+// for B matrix
 wire    [255 : 0]                       b_mem_data, b_fifo_data, b_mem_bank_output;
 wire    [ADDRESS_WIDTH - 1 : 0]         b_addr_fifo_out, b_addr_fifo_in;
 wire                                    b_addr_inc, b_addr_full, b_mem_done, b_addr_fifo_empty;
@@ -214,7 +218,7 @@ array_b_addresses_generator #(
     .done   ( b_data_done           )
 );
 
-// end for A matrix
+// end for B matrix
 
 logic data_done;
 assign data_done = a_data_done & b_data_done;
@@ -247,6 +251,72 @@ systolic_array_ctrl #(
     .b_buffer_addr   ( b_w_mem_bank_address     ),
     .array_start     ( start_array              ),
     .data_done       ( data_done                )
+);
+
+// systolic array
+
+wire    [A_MEM_BANK_DATA_WIDTH - 1 : 0] row_array_input;
+wire    [255 : 0]                       col_array_input;
+wire                                    array_reset_n [ARRAY_HEIGHT - 1 : 0][ARRAY_WIDTH - 1 : 0];
+wire    [2 * DATA_WIDTH - 1 : 0]        c_array_output[ARRAY_HEIGHT - 1 : 0][ARRAY_WIDTH - 1 : 0];
+
+genvar i, j;
+
+crossbar #(
+    .DATA_WIDTH     ( DATA_WIDTH_BYTES * 8 ),
+    .ARRAY_ELLEMENTS( ARRAY_HEIGHT         )
+) row_crossbar (
+    .clk            ( clk               ) ,
+    .reset_n        ( reset_n           ) ,
+    .sync_reset_n   ( 1'b1              ) ,
+    .shift          ( start_array_d     ) ,
+    .data_i         ( a_mem_bank_output ) ,
+    .data_o         ( row_array_input   ) 
+);
+
+crossbar #(
+    .DATA_WIDTH     ( DATA_WIDTH_BYTES * 8 ),
+    .ARRAY_ELLEMENTS( ARRAY_WIDTH          )
+) col_crossbar (
+    .clk            ( clk               ) ,
+    .reset_n        ( reset_n           ) ,
+    .sync_reset_n   ( 1'b1              ) ,
+    .shift          ( start_array_d     ) ,
+    .data_i         ( b_mem_bank_output ) ,
+    .data_o         ( col_array_input   ) 
+);
+
+systolic_array #(
+    .ARRAY_WIDTH ( ARRAY_WIDTH          ),
+    .ARRAY_HEIGHT( ARRAY_HEIGHT         ),
+    .DATA_WIDTH  ( DATA_WIDTH_BYTES * 8 )
+) array (
+    .clk            ( clk               ),
+    .reset_n        ( reset_n           ),
+    .array_reset_n  ( array_reset_n     ),
+    .work           ( start_array_d     ),
+    .a_array_input  ( row_array_input   ),
+    .b_array_input  ( col_array_input   ),
+    .c_array_output ( c_array_output    )
+);
+
+array_results_controller #(
+    .ARRAY_HEIGHT( ARRAY_HEIGHT         ),
+    .ARRAY_WIDTH ( ARRAY_WIDTH          ),
+    .DATA_WIDTH  ( DATA_WIDTH_BYTES * 16),
+    .BUS_WIDTH   ( 256                  )
+) array_results_controller (
+    .clk          ( clk             ),
+    .reset_n      ( reset_n         ),
+    .m            ( m               ),
+    .n            ( n               ),
+    .p            ( p               ),
+    .array_start  ( start_array     ),
+    .array_results( c_array_output  ),
+    .array_reset_n( array_reset_n   ),
+    .data_o       (  ),
+    .valid_o      (  ),
+    .done         ( array_done      )                            
 );
 
 endmodule

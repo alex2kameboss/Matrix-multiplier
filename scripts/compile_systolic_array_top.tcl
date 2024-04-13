@@ -13,3 +13,8 @@ vlog ../src/mem_b_addresses_generator.sv
 vlog ../src/buffer_write_address_generator.sv
 vlog ../src/mult.sv
 vlog ../src/add.sv
+vlog ../src/mac.sv
+vlog ../src/auto_shift_register.sv
+vlog ../src/crossbar.sv
+vlog ../src/systolic_array.sv
+vlog ../src/array_results_controller.sv
