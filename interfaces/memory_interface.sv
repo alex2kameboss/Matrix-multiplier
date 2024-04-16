@@ -52,12 +52,12 @@ inout   data
   
   property ack_without_req; // Ack without an active request 
     @(posedge clk) disable iff (~rst_n)
-    (ack & ~req) |=> ~ack;
+    (ack) |-> req;
   endproperty
   
   property ack_after_one_req_cc; //Acknowledge comes after one request HIGH clock cycle time
     @(posedge clk) disable iff (~rst_n)
-    req & $changed(req) |-> ##1 ack;
+    req & $changed(req) |-> ~ack;
   endproperty
   
   always @(posedge clk) 

@@ -45,7 +45,7 @@ output  pready,
   property pr_generic_not_unknown (signal) 
     @(posedge pclk) disable iff(~preset_n)
       !$isunknown(signal) ;
-  endproperty ;   
+  endproperty    
 
   //paddr changed? -> transfer finished OR didn't start yet ((!psel))
   property idle_state ;
@@ -65,17 +65,17 @@ output  pready,
   
   property access_last_state ;
     @(posedge pclk) disable iff(!preset_n)
-    (psel && penable && pready) |=> (!psel) or (psel && !penable) ;
-  endproperty
+    (psel && penable && pready) |=> (!psel) or (psel && !penable) ; //TODO:
+  endproperty 
   
   property pr_generic_stable(signal) 
     @(posedge pclk) disable iff(!preset_n)
-    !$stable(signal) |-> (psel && !penable) or (!psel) ;
+    !$stable(signal) |-> (psel && !penable) or (!psel); //TODO:
   endproperty
   //Some signals need to be treated separately. pwdata needs be stable only during write transfers (pwrite=1):
   property pwdata_in_wr_transfer ;  
     @(posedge pclk) disable iff(!preset_n)
-    !$stable(pwdata) |-> (!pwrite) or ((psel && !penable) or (!psel)) ;
+    !$stable(pwdata) |-> (!pwrite) or ((psel && !penable) or (!psel)) ; //TODO:
   endproperty
 
   property prdata_in_read_transfer ;  
