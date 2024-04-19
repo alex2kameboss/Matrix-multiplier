@@ -24,6 +24,7 @@ module mem_c_addresses_generator #(
     output                              op_done     
 );
 
+logic                                   op_done_int;
 enum bit [1 : 0] { IDL, WAIT_DATA, WRITE_DATA, UPDATE_ADDR } state, next_state;
 
 assign fifo_incr = state == UPDATE_ADDR;
@@ -38,7 +39,7 @@ always_comb begin
         IDL         :   next_state = start_i ? WAIT_DATA : IDL; 
         WAIT_DATA   :   next_state = ~fifo_empty ? WRITE_DATA : WAIT_DATA;
         WRITE_DATA  :   next_state = tran_done ? UPDATE_ADDR : WRITE_DATA;
-        UPDATE_ADDR :   next_state = op_done ? IDL : WAIT_DATA;
+        UPDATE_ADDR :   next_state = op_done_int ? IDL : WAIT_DATA;
     endcase
 end
 
@@ -66,7 +67,8 @@ assign row_m_1          = row_m + ARRAY_HEIGHT;
 assign col_m_1          = col_m + ARRAY_WIDTH;
 assign row_done         = row_m_1 == m;
 assign col_done         = col_m_1 == p;
-assign op_done          = row_done & col_done & matrix_done;
+assign op_done_int      = row_done & col_done & matrix_done;
+assign op_done          = op_done_int & state == UPDATE_ADDR;
 
 
 always_ff @( posedge clk or negedge reset_n )

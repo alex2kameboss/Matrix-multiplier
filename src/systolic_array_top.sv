@@ -33,6 +33,8 @@ localparam MEM_ADD_WIRDTH           = 10;
 localparam MEM_SIZE                 = 1 << MEM_ADD_WIRDTH;
 localparam A_MEM_BANK_DATA_WIDTH    = ARRAY_HEIGHT * DATA_WIDTH_BYTES * 8;
 
+wire                                    start_i_c_bus, ooperation_done_c_bus;
+
 wire                                    start_array;
 wire                                    a_data_done, b_data_done;
 wire                                    array_done;
@@ -352,18 +354,18 @@ mem_c_addresses_generator #(
     .ARRAY_HEIGHT    ( ARRAY_HEIGHT     ),
     .ARRAY_WIDTH     ( ARRAY_WIDTH      )
 ) c_addr_gen (
-    .clk        ( c_bus.clk         ),
-    .reset_n    ( c_bus.reset_n     ),
-    .start_i    ( start_i           ),
-    .m          ( m                 ),
-    .p          ( p                 ),
-    .base_addr_c( base_addr_c       ),
-    .do_tran    ( c_do_tran         ),
-    .addr       ( c_addr            ),
-    .tran_done  ( c_tran_done       ),
-    .fifo_empty ( r_result_empty    ),
-    .fifo_incr  ( c_data_fifo_incr  ),
-    .op_done    ( operation_done    )
+    .clk        ( c_bus.clk             ),
+    .reset_n    ( c_bus.reset_n         ),
+    .start_i    ( start_i_c_bus         ),
+    .m          ( m                     ),
+    .p          ( p                     ),
+    .base_addr_c( base_addr_c           ),
+    .do_tran    ( c_do_tran             ),
+    .addr       ( c_addr                ),
+    .tran_done  ( c_tran_done           ),
+    .fifo_empty ( r_result_empty        ),
+    .fifo_incr  ( c_data_fifo_incr      ),
+    .op_done    ( ooperation_done_c_bus )
 );
 
 memory_ctrl c_data_ctrl (
@@ -375,5 +377,21 @@ memory_ctrl c_data_ctrl (
     .r_data_o   (                       ), // nc, write only
     .tran_done_o( c_tran_done           )
 );
+
+// syncronizers
+// for start_i (clk -> c_bus.clk)
+// for op_done (c_bus.clk -> clk)
+
+logic [1 : 0] start_i_c_bus_clk, op_done_clk;
+assign start_i_c_bus    = start_i_c_bus_clk[0];
+assign operation_done   = op_done_clk[0];
+
+always_ff @( posedge c_bus.clk or negedge c_bus.reset_n )
+    if ( ~c_bus.reset_n )                       start_i_c_bus_clk <= 'd0;   else
+                                                start_i_c_bus_clk <= { start_i, start_i_c_bus_clk[1] };
+
+always_ff @( posedge clk or negedge reset_n )
+    if ( ~reset_n )                             op_done_clk <= 'd0;         else
+                                                op_done_clk <= { ooperation_done_c_bus, op_done_clk[1] };
 
 endmodule
