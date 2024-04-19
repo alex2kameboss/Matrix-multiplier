@@ -10,6 +10,7 @@ vlog ../src/array_b_addresses_generator.sv
 vlog ../src/systolic_array_ctrl.sv
 vlog ../src/mem_a_addresses_generator.sv
 vlog ../src/mem_b_addresses_generator.sv
+vlog ../src/mem_c_addresses_generator.sv
 vlog ../src/buffer_write_address_generator.sv
 vlog ../src/mult.sv
 vlog ../src/add.sv

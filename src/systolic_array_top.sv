@@ -1,6 +1,6 @@
 module systolic_array_top #(
-    parameter   ARRAY_WIDTH         =   4,
-    parameter   ARRAY_HEIGHT        =   32,
+    parameter   ARRAY_WIDTH         =   32,
+    parameter   ARRAY_HEIGHT        =   4,
     parameter   DATA_WIDTH          =   8,
     parameter   BUS_WIDTH_BYTES     =   32,
     parameter   DATA_WIDTH_BYTES    =   1
@@ -19,7 +19,10 @@ module systolic_array_top #(
     input   [15 : 0]                        n               ,
     input   [15 : 0]                        p               ,
     input   [15 : 0]                        base_addr_a     ,
-    input   [15 : 0]                        base_addr_b     
+    input   [15 : 0]                        base_addr_b     ,
+    input   [15 : 0]                        base_addr_c     ,
+    // operation done
+    output                                  operation_done  
 );
     
 localparam MEM_DATA_WIDTH_BYTES     = 32;
@@ -300,11 +303,19 @@ systolic_array #(
     .c_array_output ( c_array_output    )
 );
 
+// result array
+
+wire [BUS_WIDTH_BYTES * 8 - 1 : 0]  w_result_data, r_result_data_fifo;
+wire [15 : 0]                       c_addr;
+wire                                c_do_tran, c_tran_done, c_data_fifo_incr;
+wire                                w_result_valid, r_result_empty, r_result_incr;
+
+
 array_results_controller #(
     .ARRAY_HEIGHT( ARRAY_HEIGHT         ),
     .ARRAY_WIDTH ( ARRAY_WIDTH          ),
     .DATA_WIDTH  ( DATA_WIDTH_BYTES * 16),
-    .BUS_WIDTH   ( 256                  )
+    .BUS_WIDTH   ( BUS_WIDTH_BYTES * 8  )
 ) array_results_controller (
     .clk          ( clk             ),
     .reset_n      ( reset_n         ),
@@ -314,9 +325,55 @@ array_results_controller #(
     .array_start  ( start_array     ),
     .array_results( c_array_output  ),
     .array_reset_n( array_reset_n   ),
-    .data_o       (  ),
-    .valid_o      (  ),
+    .data_o       ( w_result_data   ),
+    .valid_o      ( w_result_valid  ),
     .done         ( array_done      )                            
+);
+
+async_fifo #(
+    .DATA_WIDTH( BUS_WIDTH_BYTES * 8 ),
+    .FIFO_DEPTH( 256 )
+) c_data_fifo (
+    .w_clk       ( clk                  ),
+    .w_reset_n   ( reset_n              ),
+    .w_incr_i    ( w_result_valid       ),
+    .w_full_o    (                      ), // nc, to not write data is not an option
+    .w_data      ( w_result_data        ),
+    .r_clk       ( c_bus.clk            ),
+    .r_reset_n   ( c_bus.reset_n        ),
+    .r_incr_i    ( c_data_fifo_incr     ),
+    .r_empty_o   ( r_result_empty       ),
+    .r_data      ( r_result_data_fifo   ) 
+);
+
+mem_c_addresses_generator #(
+    .BUS_WIDTH_BYTES ( BUS_WIDTH_BYTES  ),
+    .DATA_WIDTH_BYTES( DATA_WIDTH_BYTES * 2 ),
+    .ARRAY_HEIGHT    ( ARRAY_HEIGHT     ),
+    .ARRAY_WIDTH     ( ARRAY_WIDTH      )
+) c_addr_gen (
+    .clk        ( c_bus.clk         ),
+    .reset_n    ( c_bus.reset_n     ),
+    .start_i    ( start_i           ),
+    .m          ( m                 ),
+    .p          ( p                 ),
+    .base_addr_c( base_addr_c       ),
+    .do_tran    ( c_do_tran         ),
+    .addr       ( c_addr            ),
+    .tran_done  ( c_tran_done       ),
+    .fifo_empty ( r_result_empty    ),
+    .fifo_incr  ( c_data_fifo_incr  ),
+    .op_done    ( operation_done    )
+);
+
+memory_ctrl c_data_ctrl (
+    .bus        ( c_bus                 ),
+    .do_tran_i  ( c_do_tran             ),
+    .w_en_i     ( 1'b1                  ),
+    .addr_i     ( c_addr                ),
+    .w_data_i   ( r_result_data_fifo    ),
+    .r_data_o   (                       ), // nc, write only
+    .tran_done_o( c_tran_done           )
 );
 
 endmodule
