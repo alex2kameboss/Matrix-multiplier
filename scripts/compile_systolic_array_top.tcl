@@ -1,4 +1,3 @@
-vlib work
 vlog ../interfaces/memory_interface.sv
 vlog ../src/systolic_array_top.sv
 vlog ../src/memory.sv
