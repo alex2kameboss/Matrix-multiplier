@@ -1,21 +1,18 @@
-interface apb_interface #(
-    parameter   ADDR_WIDTH  =   32,
-    parameter   DATA_WIDTH  =   32
-) (
+interface apb_interface (
     input       pclk,
     input       preset_n
 );
     
-logic   [ADDR_WIDTH - 1 : 0]        paddr;
+logic   [2 : 0]         paddr;
 
-logic                               psel;
-logic                               penable;
+logic                   psel;
+logic                   penable;
 
-logic                               pwrite;
-logic   [DATA_WIDTH - 1 : 0]        pwdata;
+logic                   pwrite;
+logic   [15 : 0]        pwdata;
 
-logic                               pready;
-logic   [DATA_WIDTH - 1 : 0]        prdata;
+logic                   pready;
+logic   [15 : 0]        prdata;
 
 modport master (
 input   pclk,
@@ -38,7 +35,7 @@ input   pclk,
         pwrite,
         pwdata,
 output  pready,
-        prdata,
+        prdata
 );
 
 `ifdef ENABLE_ASSERTIONS
