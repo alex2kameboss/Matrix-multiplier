@@ -30,7 +30,7 @@ always_ff @( posedge bus.pclk or negedge bus.preset_n )
         for (i = 0; i < 8 ; i = i + 1)
             registers[i] <= 'd0;
     else if ( bus.psel & bus.pwrite)    registers[bus.paddr] <= bus.pwdata;
-    else if ( end_i )                   registers[3'd6]['d1] <= 1'b1;
+    else if ( end_i )                   registers[3'd6][1 : 0] <= 2'b10;
 
 always_ff @( posedge bus.pclk or negedge bus.preset_n )
     if ( ~bus.preset_n )        psel_reg <= 'd0;    else
