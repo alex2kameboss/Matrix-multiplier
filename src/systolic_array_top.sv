@@ -145,14 +145,13 @@ array_a_addresses_generator #(
 
 
 // for B matrix
-wire    [255 : 0]                       b_mem_data, b_fifo_data, b_mem_bank_output;
+wire    [255 : 0]                       b_mem_data, b_data_buffer_output;
 wire    [ADDRESS_WIDTH - 1 : 0]         b_addr_fifo_out, b_addr_fifo_in;
 wire                                    b_addr_inc, b_addr_full, b_mem_done, b_addr_fifo_empty;
-wire                                    b_data_full, b_data_empty, b_data_inc;
+wire                                    b_data_full, b_data_empty, b_data_inc, b_data_fifo_accepted;
 wire                                    b_mem_bank_valid_data;
 wire    [BUFFER_ADDRESS_WIDTH - 1 : 0]  b_w_mem_bank_address, b_r_mem_bank_address;
-
-assign b_mem_bank_valid_data = ~b_data_empty;
+wire    [ARRAY_WIDTH * DATA_WIDTH_BYTES * 8 - 1 : 0]  b_mem_data_in, b_mem_bank_output;
 
 memory_ctrl b_data_ctrl (
     .bus        ( b_bus                 ),
@@ -191,18 +190,31 @@ async_fifo #(
     .w_data      ( b_mem_data           ),
     .r_clk       ( clk                  ),
     .r_reset_n   ( reset_n              ),
-    .r_incr_i    ( b_mem_bank_valid_data),
+    .r_incr_i    ( b_data_fifo_accepted ),
     .r_empty_o   ( b_data_empty         ),
-    .r_data      ( b_fifo_data          ) 
+    .r_data      ( b_data_buffer_output ) 
+);
+
+data_sequencer # (
+    .DATA_INPUT_WIDTH  ( BUS_WIDTH_BYTES * 8 ) ,
+    .DATA_OUTPUT_WIDTH ( ARRAY_WIDTH * DATA_WIDTH_BYTES * 8 )  
+) b_data_sequncer (
+    .clk      ( clk                     ),
+    .reset_n  ( reset_n                 ),
+    .valid_i  ( ~b_data_empty           ),
+    .data_i   ( b_data_buffer_output    ),
+    .accepted ( b_data_fifo_accepted    ),
+    .data_o   ( b_mem_data_in           ),
+    .valid_o  ( b_mem_bank_valid_data   ) 
 );
 
 memory #(
-    .DATA_SIZE  ( BUS_WIDTH_BYTES * 8   ),
-    .DEPTH      ( MEM_SIZE              )
+    .DATA_SIZE  ( ARRAY_WIDTH * DATA_WIDTH_BYTES * 8 ),
+    .DEPTH      ( MEM_SIZE                           )
 ) b_mem_bank (
     .w_clk   ( clk                  ),
     .w_addr_i( b_w_mem_bank_address ),
-    .w_data_i( b_fifo_data          ),
+    .w_data_i( b_mem_data_in        ),
     .w_en_i  ( b_mem_bank_valid_data),
     .r_addr_i( b_r_mem_bank_address ),
     .r_data_o( b_mem_bank_output    ) 
@@ -234,7 +246,8 @@ systolic_array_ctrl #(
     .DATA_WIDTH_BYTES    ( DATA_WIDTH_BYTES     ),
     .MEM_DATA_WIDTH_BYTES( MEM_DATA_WIDTH_BYTES ),
     .BUFFER_ADDRESS_WIDTH( BUFFER_ADDRESS_WIDTH ),
-    .ARRAY_HEIGHT        ( ARRAY_HEIGHT         )
+    .ARRAY_HEIGHT        ( ARRAY_HEIGHT         ),
+    .ARRAY_WIDTH         ( ARRAY_WIDTH          )
 ) contorller (
     .clk             ( clk                      ),
     .reset_n         ( reset_n                  ),
@@ -260,8 +273,8 @@ systolic_array_ctrl #(
 
 // systolic array
 
-wire    [A_MEM_BANK_DATA_WIDTH - 1 : 0] row_array_input;
-wire    [255 : 0]                       col_array_input;
+wire    [ARRAY_HEIGHT * DATA_WIDTH_BYTES * 8 - 1 : 0] row_array_input;
+wire    [ARRAY_WIDTH * DATA_WIDTH_BYTES * 8 - 1 : 0]                       col_array_input;
 wire                                    array_reset_n [ARRAY_HEIGHT - 1 : 0][ARRAY_WIDTH - 1 : 0];
 wire    [2 * DATA_WIDTH - 1 : 0]        c_array_output[ARRAY_HEIGHT - 1 : 0][ARRAY_WIDTH - 1 : 0];
 

@@ -3,7 +3,8 @@ module systolic_array_ctrl #(
     parameter   DATA_WIDTH_BYTES        =   1,
     parameter   MEM_DATA_WIDTH_BYTES    =   32,
     parameter   BUFFER_ADDRESS_WIDTH    =   10,
-    parameter   ARRAY_HEIGHT            =   4
+    parameter   ARRAY_HEIGHT            =   4,
+    parameter   ARRAY_WIDTH             =   4
 ) (
     // generic signals
     input                                   clk             ,
@@ -89,15 +90,33 @@ buffer_write_address_generator #(.BUFFER_ADDRESS_WIDTH(BUFFER_ADDRESS_WIDTH)) a_
     .clear(data_done)
 );
 
-buffer_write_address_generator #(.BUFFER_ADDRESS_WIDTH(BUFFER_ADDRESS_WIDTH)) b_buf_addr_i (
-    .clk(clk),
-    .reset_n(reset_n),
-    .start_i(start_i),
-    .count_up(b_valid_data),
-    .global_counts(b_count_addr),
-    .address(b_buffer_addr),
-    .limit_pass(b_half_mem),
-    .clear(data_done)
+//buffer_write_address_generator #(.BUFFER_ADDRESS_WIDTH(BUFFER_ADDRESS_WIDTH)) b_buf_addr_i (
+//    .clk(clk),
+//    .reset_n(reset_n),
+//    .start_i(start_i),
+//    .count_up(b_valid_data),
+//    .global_counts(b_count_addr),
+//    .address(b_buffer_addr),
+//    .limit_pass(b_half_mem),
+//    .clear(data_done)
+//);
+
+mem_bank_address_generator #(
+    .ARRAY_WIDTH         ( ARRAY_WIDTH          ),
+    .DATA_WIDTH_BYTES    ( DATA_WIDTH_BYTES     ),
+    .BUS_WIDTH_BYTES     ( MEM_DATA_WIDTH_BYTES ),
+    .BUFFER_ADDRESS_WIDTH( BUFFER_ADDRESS_WIDTH )
+) b_buf_addr_i (
+    .clk            ( clk              ),
+    .reset_n        ( reset_n          ),
+    .start_i        ( start_i          ),
+    .n              ( n                ),
+    .p              ( p                ),
+    .valid_i        ( b_valid_data     ),
+    .addr_o         ( b_buffer_addr    ),
+    .global_counts  ( b_count_addr     ),
+    .clear          ( data_done        )
+
 );
 
 logic b_start_reg, a_start_reg;
