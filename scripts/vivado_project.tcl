@@ -66,4 +66,41 @@ set_property -dict [list \
   CONFIG.tier_6 {true} \
 ] [get_ips mac_dsp]
 
+# create addr_fifo
+create_ip -name fifo_generator -vendor xilinx.com -library ip -version 13.2 -module_name addr_fifo
+set_property -dict [list \
+  CONFIG.Component_Name {addr_fifo} \
+  CONFIG.Enable_Reset_Synchronization {false} \
+  CONFIG.Fifo_Implementation {Independent_Clocks_Block_RAM} \
+  CONFIG.Input_Data_Width {16} \
+  CONFIG.Input_Depth {256} \
+  CONFIG.Reset_Pin {true} \
+  CONFIG.Use_Embedded_Registers {false} \
+] [get_ips addr_fifo]
+
+# create data_fifo
+create_ip -name fifo_generator -vendor xilinx.com -library ip -version 13.2 -module_name data_fifo
+set_property -dict [list \
+  CONFIG.Component_Name {data_fifo} \
+  CONFIG.Enable_Reset_Synchronization {false} \
+  CONFIG.Fifo_Implementation {Independent_Clocks_Block_RAM} \
+  CONFIG.Input_Data_Width {256} \
+  CONFIG.Input_Depth {256} \
+  CONFIG.Reset_Pin {true} \
+  CONFIG.Use_Embedded_Registers {false} \
+] [get_ips data_fifo]
+
+# create memory block
+create_ip -name blk_mem_gen -vendor xilinx.com -library ip -version 8.4 -module_name mem_block
+set_property -dict [list \
+  CONFIG.Component_Name {mem_block} \
+  CONFIG.Enable_A {Always_Enabled} \
+  CONFIG.Enable_B {Always_Enabled} \
+  CONFIG.Memory_Type {Simple_Dual_Port_RAM} \
+  CONFIG.Operating_Mode_A {READ_FIRST} \
+  CONFIG.Register_PortB_Output_of_Memory_Primitives {false} \
+  CONFIG.Write_Depth_A {1024} \
+  CONFIG.Write_Width_A {128} \
+] [get_ips mem_block]
+
 start_gui

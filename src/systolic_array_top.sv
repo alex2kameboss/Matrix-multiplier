@@ -68,6 +68,8 @@ memory_ctrl a_data_ctrl (
     .tran_done_o( a_mem_done            )
 );
 
+`ifndef XILINX
+
 async_fifo #(
     .DATA_WIDTH( ADDRESS_WIDTH ),
     .FIFO_DEPTH( MEM_FIFO_DEPTH )
@@ -100,6 +102,59 @@ async_fifo #(
     .r_data      ( a_fifo_data      ) 
 );
 
+memory #(
+    .DATA_SIZE  ( A_MEM_BANK_DATA_WIDTH ),
+    .DEPTH      ( MEM_SIZE              )
+) a_mem_bank (
+    .w_clk   ( clk                  ),
+    .w_addr_i( a_w_mem_bank_address ),
+    .w_data_i( a_mem_bank_input     ),
+    .w_en_i  ( a_mem_bank_valid_data),
+    .r_addr_i( a_r_mem_bank_address ),
+    .r_data_o( a_mem_bank_output    ) 
+);
+
+`else
+
+addr_fifo a_address_fifo (
+    .wr_clk ( clk               ),
+    .wr_rst ( ~reset_n          ),
+    .rd_clk ( a_bus.clk         ),
+    .rd_rst ( ~a_bus.reset_n    ),
+    .din    ( a_addr_fifo_in    ),
+    .wr_en  ( a_addr_inc        ),
+    .rd_en  ( a_mem_done        ),
+    .dout   ( a_addr_fifo_out   ),
+    .full   ( a_addr_full       ),
+    .empty  ( a_addr_fifo_empty ) 
+);
+
+
+data_fifo a_data_fifo (
+    .wr_clk ( a_bus.clk     ) ,
+    .wr_rst ( ~a_bus.reset_n) ,
+    .rd_clk ( clk           ) ,
+    .rd_rst ( ~reset_n      ) ,
+    .din    ( a_mem_data    ) ,
+    .wr_en  ( a_mem_done    ) ,
+    .rd_en  ( a_data_inc    ) ,
+    .dout   ( a_fifo_data   ) ,
+    .full   ( a_data_full   ) ,
+    .empty  ( a_data_empty  ) 
+);
+
+mem_block a_mem_bank (
+    .clka  ( clk                    ),
+    .wea   ( a_mem_bank_valid_data  ),
+    .addra ( a_w_mem_bank_address   ),
+    .dina  ( a_mem_bank_input       ),
+    .clkb  ( clk                    ),
+    .addrb ( a_r_mem_bank_address   ),
+    .doutb ( a_mem_bank_output      )
+);
+
+`endif
+
 row_converter #(
     .BUS_WIDTH_BYTES ( BUS_WIDTH_BYTES  ),
     .DATA_WIDTH_BYTES( DATA_WIDTH_BYTES ),
@@ -112,18 +167,6 @@ row_converter #(
     .data_o  ( a_mem_bank_input         ),
     .valid_o ( a_mem_bank_valid_data    ),
     .accepted( a_data_inc               )
-);
-
-memory #(
-    .DATA_SIZE  ( A_MEM_BANK_DATA_WIDTH ),
-    .DEPTH      ( MEM_SIZE              )
-) a_mem_bank (
-    .w_clk   ( clk                  ),
-    .w_addr_i( a_w_mem_bank_address ),
-    .w_data_i( a_mem_bank_input     ),
-    .w_en_i  ( a_mem_bank_valid_data),
-    .r_addr_i( a_r_mem_bank_address ),
-    .r_data_o( a_mem_bank_output    ) 
 );
 
 array_a_addresses_generator #(
@@ -163,6 +206,8 @@ memory_ctrl b_data_ctrl (
     .tran_done_o( b_mem_done            )
 );
 
+`ifndef XILINX
+
 async_fifo #(
     .DATA_WIDTH( ADDRESS_WIDTH ),
     .FIFO_DEPTH( MEM_FIFO_DEPTH )
@@ -195,6 +240,58 @@ async_fifo #(
     .r_data      ( b_data_buffer_output ) 
 );
 
+memory #(
+    .DATA_SIZE  ( ARRAY_WIDTH * DATA_WIDTH_BYTES * 8 ),
+    .DEPTH      ( MEM_SIZE                           )
+) b_mem_bank (
+    .w_clk   ( clk                  ),
+    .w_addr_i( b_w_mem_bank_address ),
+    .w_data_i( b_mem_data_in        ),
+    .w_en_i  ( b_mem_bank_valid_data),
+    .r_addr_i( b_r_mem_bank_address ),
+    .r_data_o( b_mem_bank_output    ) 
+);
+
+`else
+
+addr_fifo b_address_fifo (
+    .wr_clk ( clk               ),
+    .wr_rst ( ~reset_n          ),
+    .rd_clk ( b_bus.clk         ),
+    .rd_rst ( ~b_bus.reset_n    ),
+    .din    ( b_addr_fifo_in    ),
+    .wr_en  ( b_addr_inc        ),
+    .rd_en  ( b_mem_done        ),
+    .dout   ( b_addr_fifo_out   ),
+    .full   ( b_addr_full       ),
+    .empty  ( b_addr_fifo_empty ) 
+);
+
+data_fifo b_data_fifo (
+    .wr_clk ( b_bus.clk             ) ,
+    .wr_rst ( ~b_bus.reset_n        ) ,
+    .rd_clk ( clk                   ) ,
+    .rd_rst ( ~reset_n              ) ,
+    .din    ( b_mem_data            ) ,
+    .wr_en  ( b_mem_done            ) ,
+    .rd_en  ( b_data_fifo_accepted  ) ,
+    .dout   ( b_data_buffer_output  ) ,
+    .full   ( b_data_full           ) ,
+    .empty  ( b_data_empty          ) 
+);
+
+mem_block b_mem_bank (
+    .clka  ( clk                    ),
+    .wea   ( b_mem_bank_valid_data  ),
+    .addra ( b_w_mem_bank_address   ),
+    .dina  ( b_mem_data_in          ),
+    .clkb  ( clk                    ),
+    .addrb ( b_r_mem_bank_address   ),
+    .doutb ( b_mem_bank_output      )
+);
+
+`endif
+
 data_sequencer # (
     .DATA_INPUT_WIDTH  ( BUS_WIDTH_BYTES * 8 ) ,
     .DATA_OUTPUT_WIDTH ( ARRAY_WIDTH * DATA_WIDTH_BYTES * 8 )  
@@ -206,18 +303,6 @@ data_sequencer # (
     .accepted ( b_data_fifo_accepted    ),
     .data_o   ( b_mem_data_in           ),
     .valid_o  ( b_mem_bank_valid_data   ) 
-);
-
-memory #(
-    .DATA_SIZE  ( ARRAY_WIDTH * DATA_WIDTH_BYTES * 8 ),
-    .DEPTH      ( MEM_SIZE                           )
-) b_mem_bank (
-    .w_clk   ( clk                  ),
-    .w_addr_i( b_w_mem_bank_address ),
-    .w_data_i( b_mem_data_in        ),
-    .w_en_i  ( b_mem_bank_valid_data),
-    .r_addr_i( b_r_mem_bank_address ),
-    .r_data_o( b_mem_bank_output    ) 
 );
 
 array_b_addresses_generator #(
