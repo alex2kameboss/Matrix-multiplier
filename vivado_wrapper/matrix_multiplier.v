@@ -4,8 +4,8 @@ module matrix_multiplier(
 );
 
 wrapper wrapper_i (
-    .clk  ,
-    .rst_n
+    .clk   ( clk    ),
+    .rst_n ( rst_n  )
 );
 
 endmodule
