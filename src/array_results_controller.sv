@@ -41,17 +41,22 @@ endgenerate
 
 logic   [15 : 0]                            row_counter, row_counter_1, col_counter, col_counter_1, loop_counter, loop_counter_1;
 logic                                       row_done, col_done, loop_done, diagonal_done, work;
-logic                                       array_start_d;
+logic                                       array_start_d, counters_done;
 
 assign row_counter_1    =   row_counter + ARRAY_HEIGHT;
 assign col_counter_1    =   col_counter + ARRAY_WIDTH; 
 assign loop_counter_1   =   loop_counter + 1'b1;
 assign diagonal_counter_1 = diagonal_counter + 1'b1;
-assign row_done         =   row_counter == m & col_done;
+assign row_done         =   row_counter == (m - ARRAY_HEIGHT) & col_done;
 assign col_done         =   col_counter_1 == p & loop_done;
 assign loop_done        =   loop_counter_1 == n;
 assign diagonal_done    =   diagonal_counter == DIAGONAL_COUNTS;
-assign done             =   col_done & row_done;
+assign done             =   counters_done & diagonal_done;
+
+always_ff @( posedge clk or negedge reset_n )
+    if ( ~reset_n )                         counters_done <= 'd0;   else
+    if ( col_done & row_done )              counters_done <= 'd1;   else
+    if ( diagonal_done )                    counters_done <= 'd0;
 
 always_ff @( posedge clk or negedge reset_n )
     if ( ~reset_n )                         array_start_d <= 'd0;    else
@@ -59,7 +64,7 @@ always_ff @( posedge clk or negedge reset_n )
 
 always_ff @( posedge clk or negedge reset_n )
     if ( ~reset_n )                         work <= 'd0;             else
-    if ( done )                             work <= 'd0;             else
+    if ( col_done & row_done )              work <= 'd0;             else
     if ( array_start_d )                    work <= 'd1;
 
 always_ff @( posedge clk or negedge reset_n )
@@ -80,7 +85,7 @@ always_ff @( posedge clk or negedge reset_n )
 always_ff @( posedge clk or negedge reset_n )
     if ( ~reset_n )                         diagonal_counter <= 'd0;        else
     if ( diagonal_done )                    diagonal_counter <= 'd0;        else
-    if ( loop_done & ~done | |diagonal_counter)     diagonal_counter <= diagonal_counter_1;
+    if ( loop_done | |diagonal_counter)     diagonal_counter <= diagonal_counter_1;
 
 // generate output data
 localparam NUMBER_OF_ELEMENTS_IN_BLOC = BUS_WIDTH / DATA_WIDTH;

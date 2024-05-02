@@ -32,7 +32,7 @@ assign burst_done   =   &burst & ~|burst_1;
 assign addr_next    =   addr_o + n;
 assign addr_base_1  =   addr_base + 1'b1;
 assign row_1        =   row + 1'b1;
-assign row_done     =   row == n & burst_done;
+assign row_done     =   row == (n - 1'b1) & burst_done;
 
 always_ff @( posedge clk or negedge reset_n )
     if ( ~reset_n )                     addr_o <= 'd0;              else
