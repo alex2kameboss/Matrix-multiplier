@@ -13,12 +13,27 @@ module mac #(
 );
     
 logic [DATA_WIDTH - 1 : 0] a_reg, b_reg;
+assign a_o = a_reg;
+assign b_o = b_reg;
+
+
+`ifdef XILINX
+
+mac_dsp mac_macro_dsp (
+    .CLK ( clk          ),
+    .SEL ( soft_reset_n ),
+    .A   ( a_i          ),
+    .B   ( b_i          ),
+    .C   ( c_o          ),
+    .P   ( c_o          )
+);
+
+`else
+
 logic [2 * DATA_WIDTH - 1 : 0] c_reg, prod_result, add_result, c_in;
 
 assign c_in = soft_reset_n ? add_result : prod_result;
 
-assign a_o = a_reg;
-assign b_o = b_reg;
 assign c_o = c_reg;
 
 mult #(.DATA_WIDTH(DATA_WIDTH)) mult_i (
@@ -34,6 +49,13 @@ add #(.DATA_WIDTH(2 * DATA_WIDTH)) add_i (
 );
 
 always_ff @( posedge clk or negedge reset_n ) begin
+    if ( ~reset_n )         c_reg <= 'd0;   else
+    if ( ld )               c_reg <= c_in;
+end
+
+`endif
+
+always_ff @( posedge clk or negedge reset_n ) begin
     if ( ~reset_n )         a_reg <= 'd0;   else
     if ( ld )               a_reg <= a_i;
 end
@@ -41,11 +63,6 @@ end
 always_ff @( posedge clk or negedge reset_n ) begin
     if ( ~reset_n )         b_reg <= 'd0;   else
     if ( ld )               b_reg <= b_i;
-end
-
-always_ff @( posedge clk or negedge reset_n ) begin
-    if ( ~reset_n )         c_reg <= 'd0;   else
-    if ( ld )               c_reg <= c_in;
 end
 
 endmodule

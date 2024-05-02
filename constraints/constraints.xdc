@@ -1,0 +1,5 @@
+create_clock -period 10.000 -name a_bus.clk -waveform {0.000 5.000} [get_ports {a_bus\\.clk}]
+create_clock -period 10.000 -name b_bus.clk -waveform {0.000 5.000} [get_ports {b_bus\\.clk}]
+create_clock -period 10.000 -name c_bus.clk -waveform {0.000 5.000} [get_ports {c_bus\\.clk}]
+create_clock -period 20.000 -name config_bus.pclk -waveform {0.000 10.000} [get_ports {config_bus\\.pclk}]
+create_clock -period 2.500 -name clk -waveform {0.000 1.250} [get_ports clk]

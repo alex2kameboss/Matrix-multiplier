@@ -1,6 +1,6 @@
 module top #(
-    parameter   ARRAY_WIDTH         =   32  ,
-    parameter   ARRAY_HEIGHT        =   4   
+    parameter   ARRAY_WIDTH         =   16  ,
+    parameter   ARRAY_HEIGHT        =   16     
 ) (
     // control interface
     apb_interface.slave         config_bus  ,
@@ -61,8 +61,8 @@ always_ff @( posedge clk or negedge reset_n )
                                     start_sync <= { start_apb, start_sync[1] };
 assign start_clk = start_sync[0];                                    
 
-always_ff @( posedge apb.clk or negedge apb.reset_n )
-    if ( ~reset_n )                 done_sync <= 'd0;           else
+always_ff @( posedge config_bus.pclk or negedge config_bus.preset_n )
+    if ( ~config_bus.preset_n )     done_sync <= 'd0;           else
                                     done_sync <= { done_clk, done_sync[1] };
 assign done_apb = done_sync[0];       
 
