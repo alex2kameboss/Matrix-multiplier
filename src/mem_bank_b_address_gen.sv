@@ -29,7 +29,7 @@ logic   [15 : 0]                        row, row_1;
 
 assign burst_1      =   burst + 1'b1;
 assign burst_done   =   &burst & ~|burst_1;
-assign addr_next    =   addr_o + n;
+assign addr_next    =   addr_o + p;
 assign addr_base_1  =   addr_base + 1'b1;
 assign row_1        =   row + 1'b1;
 assign row_done     =   row == (n - 1'b1) & burst_done;
@@ -55,6 +55,7 @@ always_ff @( posedge clk or negedge reset_n )
 always_ff @( posedge clk or negedge reset_n )
     if ( ~reset_n )                     row <= 'd0;                 else
     if ( start_i )                      row <= 'd0;                 else
+    if ( row_done )                     row <= 'd0;                 else
     if ( burst_done )                   row <= row_1;
 
 always_ff @(posedge clk or negedge reset_n)
