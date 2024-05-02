@@ -90,17 +90,8 @@ buffer_write_address_generator #(.BUFFER_ADDRESS_WIDTH(BUFFER_ADDRESS_WIDTH)) a_
     .clear(data_done)
 );
 
-//buffer_write_address_generator #(.BUFFER_ADDRESS_WIDTH(BUFFER_ADDRESS_WIDTH)) b_buf_addr_i (
-//    .clk(clk),
-//    .reset_n(reset_n),
-//    .start_i(start_i),
-//    .count_up(b_valid_data),
-//    .global_counts(b_count_addr),
-//    .address(b_buffer_addr),
-//    .limit_pass(b_half_mem),
-//    .clear(data_done)
-//);
-
+generate
+    if ( ARRAY_WIDTH * DATA_WIDTH_BYTES < BUS_WIDTH_BYTES ) begin
 mem_bank_address_generator #(
     .ARRAY_WIDTH         ( ARRAY_WIDTH          ),
     .DATA_WIDTH_BYTES    ( DATA_WIDTH_BYTES     ),
@@ -119,6 +110,19 @@ mem_bank_address_generator #(
     .clear          ( data_done        )
 
 );
+    end else begin
+buffer_write_address_generator #(.BUFFER_ADDRESS_WIDTH(BUFFER_ADDRESS_WIDTH)) b_buf_addr_i (
+    .clk(clk),
+    .reset_n(reset_n),
+    .start_i(start_i),
+    .count_up(b_valid_data),
+    .global_counts(b_count_addr),
+    .address(b_buffer_addr),
+    .limit_pass(b_half_mem),
+    .clear(data_done)
+);
+end
+endgenerate
 
 logic b_start_reg, a_start_reg;
 

@@ -291,7 +291,8 @@ mem_block b_mem_bank (
 );
 
 `endif
-
+generate
+    if ( ARRAY_WIDTH * DATA_WIDTH_BYTES < BUS_WIDTH_BYTES ) begin
 data_sequencer # (
     .DATA_INPUT_WIDTH  ( BUS_WIDTH_BYTES * 8 ) ,
     .DATA_OUTPUT_WIDTH ( ARRAY_WIDTH * DATA_WIDTH_BYTES * 8 )  
@@ -303,7 +304,13 @@ data_sequencer # (
     .accepted ( b_data_fifo_accepted    ),
     .data_o   ( b_mem_data_in           ),
     .valid_o  ( b_mem_bank_valid_data   ) 
-);
+);    
+    end else begin
+assign b_mem_data_in = b_data_buffer_output;
+assign b_mem_bank_valid_data = ~b_data_empty;
+assign b_data_fifo_accepted = b_mem_bank_valid_data;
+    end
+endgenerate
 
 array_b_addresses_generator #(
     .ARRAY_HEIGHT        ( ARRAY_HEIGHT         ),
