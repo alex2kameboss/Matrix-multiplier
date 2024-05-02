@@ -17,8 +17,11 @@ module mem_bank_address_generator #(
     output  reg [BUFFER_ADDRESS_WIDTH - 1 : 0]  addr_o          ,
     // internal control unit
     output  reg [15 : 0]                        global_counts   ,
+    output                                      limit_pass      ,
     input                                       clear              
 );
+
+assign limit_pass = global_counts[BUFFER_ADDRESS_WIDTH - 1];
 
 localparam BURST = BUS_WIDTH_BYTES / DATA_WIDTH_BYTES / ARRAY_WIDTH;
 
