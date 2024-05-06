@@ -97,37 +97,69 @@ always_ff @( posedge clk or negedge reset_n )
 //    if ( loop_done | |diagonal_counter)     diagonal_counter <= diagonal_counter_1;
 
 // generate output data
-localparam NUMBER_OF_ELEMENTS_IN_BLOC = BUS_WIDTH / DATA_WIDTH;
-logic   flush_data, flush_row_done, flush_col_done;
-logic   [$clog2(ARRAY_HEIGHT) - 1 : 0]  flush_row, flush_row_1;
-logic   [$clog2(ARRAY_WIDTH) - 1 : 0]   flush_col, flush_col_1;
+//localparam NUMBER_OF_ELEMENTS_IN_BLOC = BUS_WIDTH / DATA_WIDTH;
+//logic   flush_data, flush_row_done, flush_col_done;
+//logic   [$clog2(ARRAY_HEIGHT) - 1 : 0]  flush_row, flush_row_1;
+//logic   [$clog2(ARRAY_WIDTH) - 1 : 0]   flush_col, flush_col_1;
+//
+//assign flush_col_1      = flush_col + NUMBER_OF_ELEMENTS_IN_BLOC;
+//assign flush_row_1      = flush_row + 1'b1;
+//assign flush_row_done   = flush_row == ARRAY_HEIGHT - 1;
+//assign flush_col_done   = flush_col == ARRAY_WIDTH  - NUMBER_OF_ELEMENTS_IN_BLOC & flush_row_done;
+//assign valid_o          = flush_data;
+//
+//always_ff @( posedge clk or negedge reset_n )
+//    if ( ~reset_n )                         flush_data <= 'd0;              else
+//    if ( diagonal_done )                    flush_data <= 'd1;              else
+//    if ( flush_col_done & flush_row_done )  flush_data <= 'd0;
+//
+//always_ff @( posedge clk or negedge reset_n )
+//    if ( ~reset_n )                         flush_row <= 'd0;               else
+//    if ( flush_row_done )                   flush_row <= 'd0;               else
+//    if ( flush_data )                       flush_row <= flush_row_1;
+//
+//always_ff @( posedge clk or negedge reset_n )
+//    if ( ~reset_n )                         flush_col <= 'd0;               else
+//    if ( flush_col_done )                   flush_col <= 'd0;               else
+//    if ( flush_row_done )                   flush_col <= flush_col_1;
+//
+//genvar k;
+//generate
+//    for ( k = 0; k < NUMBER_OF_ELEMENTS_IN_BLOC; k = k + 1 ) begin : output_assign
+//        assign data_o[(k + 1) * DATA_WIDTH - 1 : k * DATA_WIDTH] = array_results_clone[flush_row][flush_col + k];
+//    end
+//endgenerate
 
-assign flush_col_1      = flush_col + NUMBER_OF_ELEMENTS_IN_BLOC;
-assign flush_row_1      = flush_row + 1'b1;
-assign flush_row_done   = flush_row == ARRAY_HEIGHT - 1;
-assign flush_col_done   = flush_col == ARRAY_WIDTH  - NUMBER_OF_ELEMENTS_IN_BLOC & flush_row_done;
-assign valid_o          = flush_data;
-
-always_ff @( posedge clk or negedge reset_n )
-    if ( ~reset_n )                         flush_data <= 'd0;              else
-    if ( diagonal_done )                    flush_data <= 'd1;              else
-    if ( flush_col_done & flush_row_done )  flush_data <= 'd0;
-
-always_ff @( posedge clk or negedge reset_n )
-    if ( ~reset_n )                         flush_row <= 'd0;               else
-    if ( flush_row_done )                   flush_row <= 'd0;               else
-    if ( flush_data )                       flush_row <= flush_row_1;
-
-always_ff @( posedge clk or negedge reset_n )
-    if ( ~reset_n )                         flush_col <= 'd0;               else
-    if ( flush_col_done )                   flush_col <= 'd0;               else
-    if ( flush_row_done )                   flush_col <= flush_col_1;
+logic   [BUS_WIDTH - 1 : 0]             lanes_output    [ARRAY_HEIGHT - 1 : 0];
+logic   [ARRAY_HEIGHT - 1 : 0]          valid_result, accepted;
+logic   [$clog2(ARRAY_HEIGHT) - 1 : 0]  output_cnt;
 
 genvar k;
 generate
-    for ( k = 0; k < NUMBER_OF_ELEMENTS_IN_BLOC; k = k + 1 ) begin : output_assign
-        assign data_o[(k + 1) * DATA_WIDTH - 1 : k * DATA_WIDTH] = array_results_clone[flush_row][flush_col + k];
+    for ( k = 0; k < ARRAY_HEIGHT; k = k + 1 ) begin : output_generator
+assign accepted[k] = (output_cnt == k) & valid_o;
+
+result_shift_lane #(
+    .ARRAY_WIDTH ( ARRAY_WIDTH ) ,
+    .DATA_WIDTH  ( DATA_WIDTH  ) ,
+    .BUS_WIDTH   ( BUS_WIDTH   ) 
+) result_lane (
+    .clk           ( clk                ) ,
+    .reset_n       ( reset_n            ) ,
+    .array_reset_n ( array_reset_n[k]   ) ,
+    .array_results ( array_results[k]   ) ,
+    .data_o        ( lanes_output[k]    ) ,  
+    .valid_o       ( valid_result[k]    ) ,
+    .accepted_i    ( accepted[k]        )                      
+);
     end
 endgenerate
+
+always_ff @( posedge clk or negedge reset_n )
+    if ( ~reset_n )                         output_cnt <= 'd0;              else
+    if ( valid_result[output_cnt] )         output_cnt <= output_cnt + 1'b1;
+
+assign data_o   = lanes_output[output_cnt];
+assign valid_o  = valid_result[output_cnt];
 
 endmodule
