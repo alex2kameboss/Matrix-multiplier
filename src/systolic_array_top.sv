@@ -439,7 +439,7 @@ array_results_controller #(
 
 async_fifo #(
     .DATA_WIDTH( BUS_WIDTH_BYTES * 8 ),
-    .FIFO_DEPTH( 256 )
+    .FIFO_DEPTH( MEM_SIZE )
 ) c_data_fifo (
     .w_clk       ( clk                  ),
     .w_reset_n   ( reset_n              ),
@@ -457,7 +457,7 @@ mem_c_addresses_generator #(
     .BUS_WIDTH_BYTES ( BUS_WIDTH_BYTES  ),
     .DATA_WIDTH_BYTES( DATA_WIDTH_BYTES * 2 ),
     .ARRAY_HEIGHT    ( ARRAY_HEIGHT     ),
-    .ARRAY_WIDTH     ( ARRAY_WIDTH      )
+    .ARRAY_WIDTH     ( BUS_WIDTH_BYTES / DATA_WIDTH_BYTES / 2 )
 ) c_addr_gen (
     .clk        ( c_bus.clk             ),
     .reset_n    ( c_bus.reset_n         ),

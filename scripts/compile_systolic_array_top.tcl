@@ -20,3 +20,4 @@ vlog ../src/systolic_array.sv
 vlog ../src/array_results_controller.sv
 vlog ../src/mem_bank_b_address_gen.sv
 vlog ../src/data_sequencer.sv
+vlog ../src/result_shift_lane.sv
