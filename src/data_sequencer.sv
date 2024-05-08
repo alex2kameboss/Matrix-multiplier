@@ -32,11 +32,12 @@ always_ff @( posedge clk or negedge reset_n )
 
 always_ff @( posedge clk or negedge reset_n )
     if ( ~reset_n )                     valid_o <= 'd0;     else
-    if ( valid_i )                      valid_o <= 'd1;     else
-    if ( done )                         valid_o <= 'd0;
+    if ( done )                         valid_o <= 'd0;     else
+    if ( valid_i )                      valid_o <= 'd1;     
 
 always_ff @( posedge clk or negedge reset_n )
     if ( ~reset_n )                     counter <= 'd0;     else
     if ( done )                         counter <= 'd0;     else
     if ( valid_o )                      counter <= counter + 1'b1;
+    
 endmodule

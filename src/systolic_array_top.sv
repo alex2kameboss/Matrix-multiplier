@@ -26,10 +26,10 @@ module systolic_array_top #(
 );
     
 localparam MEM_DATA_WIDTH_BYTES     = 32;
-localparam BUFFER_ADDRESS_WIDTH     = 10;
+localparam BUFFER_ADDRESS_WIDTH     = 16;
 localparam ADDRESS_WIDTH            = 16;
-localparam MEM_FIFO_DEPTH           = 128;
-localparam MEM_ADD_WIRDTH           = 10;
+localparam MEM_FIFO_DEPTH           = 512;
+localparam MEM_ADD_WIRDTH           = 16;
 localparam MEM_SIZE                 = 1 << MEM_ADD_WIRDTH;
 localparam A_MEM_BANK_DATA_WIDTH    = ARRAY_HEIGHT * DATA_WIDTH_BYTES * 8;
 
@@ -68,6 +68,8 @@ memory_ctrl a_data_ctrl (
     .tran_done_o( a_mem_done            )
 );
 
+`ifndef XILINX
+
 async_fifo #(
     .DATA_WIDTH( ADDRESS_WIDTH ),
     .FIFO_DEPTH( MEM_FIFO_DEPTH )
@@ -100,6 +102,59 @@ async_fifo #(
     .r_data      ( a_fifo_data      ) 
 );
 
+memory #(
+    .DATA_SIZE  ( A_MEM_BANK_DATA_WIDTH ),
+    .DEPTH      ( MEM_SIZE              )
+) a_mem_bank (
+    .w_clk   ( clk                  ),
+    .w_addr_i( a_w_mem_bank_address ),
+    .w_data_i( a_mem_bank_input     ),
+    .w_en_i  ( a_mem_bank_valid_data),
+    .r_addr_i( a_r_mem_bank_address ),
+    .r_data_o( a_mem_bank_output    ) 
+);
+
+`else
+
+addr_fifo a_address_fifo (
+    .wr_clk ( clk               ),
+    .wr_rst ( ~reset_n          ),
+    .rd_clk ( a_bus.clk         ),
+    .rd_rst ( ~a_bus.reset_n    ),
+    .din    ( a_addr_fifo_in    ),
+    .wr_en  ( a_addr_inc        ),
+    .rd_en  ( a_mem_done        ),
+    .dout   ( a_addr_fifo_out   ),
+    .full   ( a_addr_full       ),
+    .empty  ( a_addr_fifo_empty ) 
+);
+
+
+data_fifo a_data_fifo (
+    .wr_clk ( a_bus.clk     ) ,
+    .wr_rst ( ~a_bus.reset_n) ,
+    .rd_clk ( clk           ) ,
+    .rd_rst ( ~reset_n      ) ,
+    .din    ( a_mem_data    ) ,
+    .wr_en  ( a_mem_done    ) ,
+    .rd_en  ( a_data_inc    ) ,
+    .dout   ( a_fifo_data   ) ,
+    .full   ( a_data_full   ) ,
+    .empty  ( a_data_empty  ) 
+);
+
+mem_block a_mem_bank (
+    .clka  ( clk                    ),
+    .wea   ( a_mem_bank_valid_data  ),
+    .addra ( a_w_mem_bank_address   ),
+    .dina  ( a_mem_bank_input       ),
+    .clkb  ( clk                    ),
+    .addrb ( a_r_mem_bank_address   ),
+    .doutb ( a_mem_bank_output      )
+);
+
+`endif
+
 row_converter #(
     .BUS_WIDTH_BYTES ( BUS_WIDTH_BYTES  ),
     .DATA_WIDTH_BYTES( DATA_WIDTH_BYTES ),
@@ -112,18 +167,6 @@ row_converter #(
     .data_o  ( a_mem_bank_input         ),
     .valid_o ( a_mem_bank_valid_data    ),
     .accepted( a_data_inc               )
-);
-
-memory #(
-    .DATA_SIZE  ( A_MEM_BANK_DATA_WIDTH ),
-    .DEPTH      ( MEM_SIZE              )
-) a_mem_bank (
-    .w_clk   ( clk                  ),
-    .w_addr_i( a_w_mem_bank_address ),
-    .w_data_i( a_mem_bank_input     ),
-    .w_en_i  ( a_mem_bank_valid_data),
-    .r_addr_i( a_r_mem_bank_address ),
-    .r_data_o( a_mem_bank_output    ) 
 );
 
 array_a_addresses_generator #(
@@ -145,14 +188,13 @@ array_a_addresses_generator #(
 
 
 // for B matrix
-wire    [255 : 0]                       b_mem_data, b_fifo_data, b_mem_bank_output;
+wire    [255 : 0]                       b_mem_data, b_data_buffer_output;
 wire    [ADDRESS_WIDTH - 1 : 0]         b_addr_fifo_out, b_addr_fifo_in;
 wire                                    b_addr_inc, b_addr_full, b_mem_done, b_addr_fifo_empty;
-wire                                    b_data_full, b_data_empty, b_data_inc;
+wire                                    b_data_full, b_data_empty, b_data_inc, b_data_fifo_accepted;
 wire                                    b_mem_bank_valid_data;
 wire    [BUFFER_ADDRESS_WIDTH - 1 : 0]  b_w_mem_bank_address, b_r_mem_bank_address;
-
-assign b_mem_bank_valid_data = ~b_data_empty;
+wire    [ARRAY_WIDTH * DATA_WIDTH_BYTES * 8 - 1 : 0]  b_mem_data_in, b_mem_bank_output;
 
 memory_ctrl b_data_ctrl (
     .bus        ( b_bus                 ),
@@ -163,6 +205,8 @@ memory_ctrl b_data_ctrl (
     .r_data_o   ( b_mem_data            ),
     .tran_done_o( b_mem_done            )
 );
+
+`ifndef XILINX
 
 async_fifo #(
     .DATA_WIDTH( ADDRESS_WIDTH ),
@@ -191,22 +235,95 @@ async_fifo #(
     .w_data      ( b_mem_data           ),
     .r_clk       ( clk                  ),
     .r_reset_n   ( reset_n              ),
-    .r_incr_i    ( b_mem_bank_valid_data),
+    .r_incr_i    ( b_data_fifo_accepted ),
     .r_empty_o   ( b_data_empty         ),
-    .r_data      ( b_fifo_data          ) 
+    .r_data      ( b_data_buffer_output ) 
 );
 
 memory #(
-    .DATA_SIZE  ( BUS_WIDTH_BYTES * 8   ),
-    .DEPTH      ( MEM_SIZE              )
+    .DATA_SIZE  ( ARRAY_WIDTH * DATA_WIDTH_BYTES * 8 ),
+    .DEPTH      ( MEM_SIZE                           )
 ) b_mem_bank (
     .w_clk   ( clk                  ),
     .w_addr_i( b_w_mem_bank_address ),
-    .w_data_i( b_fifo_data          ),
+    .w_data_i( b_mem_data_in        ),
     .w_en_i  ( b_mem_bank_valid_data),
     .r_addr_i( b_r_mem_bank_address ),
     .r_data_o( b_mem_bank_output    ) 
 );
+
+`else
+
+addr_fifo b_address_fifo (
+    .wr_clk ( clk               ),
+    .wr_rst ( ~reset_n          ),
+    .rd_clk ( b_bus.clk         ),
+    .rd_rst ( ~b_bus.reset_n    ),
+    .din    ( b_addr_fifo_in    ),
+    .wr_en  ( b_addr_inc        ),
+    .rd_en  ( b_mem_done        ),
+    .dout   ( b_addr_fifo_out   ),
+    .full   ( b_addr_full       ),
+    .empty  ( b_addr_fifo_empty ) 
+);
+
+data_fifo b_data_fifo (
+    .wr_clk ( b_bus.clk             ) ,
+    .wr_rst ( ~b_bus.reset_n        ) ,
+    .rd_clk ( clk                   ) ,
+    .rd_rst ( ~reset_n              ) ,
+    .din    ( b_mem_data            ) ,
+    .wr_en  ( b_mem_done            ) ,
+    .rd_en  ( b_data_fifo_accepted  ) ,
+    .dout   ( b_data_buffer_output  ) ,
+    .full   ( b_data_full           ) ,
+    .empty  ( b_data_empty          ) 
+);
+
+mem_block b_mem_bank (
+    .clka  ( clk                    ),
+    .wea   ( b_mem_bank_valid_data  ),
+    .addra ( b_w_mem_bank_address   ),
+    .dina  ( b_mem_data_in          ),
+    .clkb  ( clk                    ),
+    .addrb ( b_r_mem_bank_address   ),
+    .doutb ( b_mem_bank_output      )
+);
+
+`endif
+generate
+    if ( ARRAY_WIDTH * DATA_WIDTH_BYTES < BUS_WIDTH_BYTES ) begin
+data_sequencer # (
+    .DATA_INPUT_WIDTH  ( BUS_WIDTH_BYTES * 8 ) ,
+    .DATA_OUTPUT_WIDTH ( ARRAY_WIDTH * DATA_WIDTH_BYTES * 8 )  
+) b_data_sequncer (
+    .clk      ( clk                     ),
+    .reset_n  ( reset_n                 ),
+    .valid_i  ( ~b_data_empty           ),
+    .data_i   ( b_data_buffer_output    ),
+    .accepted ( b_data_fifo_accepted    ),
+    .data_o   ( b_mem_data_in           ),
+    .valid_o  ( b_mem_bank_valid_data   ) 
+);    
+    end else if ( ARRAY_WIDTH * DATA_WIDTH_BYTES > BUS_WIDTH_BYTES ) begin
+b_data_concat # (
+    .DATA_INPUT_WIDTH  ( BUS_WIDTH_BYTES * 8 ) ,
+    .DATA_OUTPUT_WIDTH ( ARRAY_WIDTH * DATA_WIDTH_BYTES * 8 )  
+) b_data_concat (
+    .clk      ( clk                     ),
+    .reset_n  ( reset_n                 ),
+    .valid_i  ( ~b_data_empty           ),
+    .data_i   ( b_data_buffer_output    ),
+    .accepted ( b_data_fifo_accepted    ),
+    .data_o   ( b_mem_data_in           ),
+    .valid_o  ( b_mem_bank_valid_data   ) 
+);    
+    end else begin
+assign b_mem_data_in = b_data_buffer_output;
+assign b_mem_bank_valid_data = ~b_data_empty;
+assign b_data_fifo_accepted = b_mem_bank_valid_data;
+    end
+endgenerate
 
 array_b_addresses_generator #(
     .ARRAY_HEIGHT        ( ARRAY_HEIGHT         ),
@@ -234,7 +351,8 @@ systolic_array_ctrl #(
     .DATA_WIDTH_BYTES    ( DATA_WIDTH_BYTES     ),
     .MEM_DATA_WIDTH_BYTES( MEM_DATA_WIDTH_BYTES ),
     .BUFFER_ADDRESS_WIDTH( BUFFER_ADDRESS_WIDTH ),
-    .ARRAY_HEIGHT        ( ARRAY_HEIGHT         )
+    .ARRAY_HEIGHT        ( ARRAY_HEIGHT         ),
+    .ARRAY_WIDTH         ( ARRAY_WIDTH          )
 ) contorller (
     .clk             ( clk                      ),
     .reset_n         ( reset_n                  ),
@@ -260,8 +378,8 @@ systolic_array_ctrl #(
 
 // systolic array
 
-wire    [A_MEM_BANK_DATA_WIDTH - 1 : 0] row_array_input;
-wire    [255 : 0]                       col_array_input;
+wire    [ARRAY_HEIGHT * DATA_WIDTH_BYTES * 8 - 1 : 0] row_array_input;
+wire    [ARRAY_WIDTH * DATA_WIDTH_BYTES * 8 - 1 : 0]                       col_array_input;
 wire                                    array_reset_n [ARRAY_HEIGHT - 1 : 0][ARRAY_WIDTH - 1 : 0];
 wire    [2 * DATA_WIDTH - 1 : 0]        c_array_output[ARRAY_HEIGHT - 1 : 0][ARRAY_WIDTH - 1 : 0];
 
@@ -334,7 +452,7 @@ array_results_controller #(
 
 async_fifo #(
     .DATA_WIDTH( BUS_WIDTH_BYTES * 8 ),
-    .FIFO_DEPTH( 256 )
+    .FIFO_DEPTH( MEM_SIZE )
 ) c_data_fifo (
     .w_clk       ( clk                  ),
     .w_reset_n   ( reset_n              ),
@@ -352,7 +470,7 @@ mem_c_addresses_generator #(
     .BUS_WIDTH_BYTES ( BUS_WIDTH_BYTES  ),
     .DATA_WIDTH_BYTES( DATA_WIDTH_BYTES * 2 ),
     .ARRAY_HEIGHT    ( ARRAY_HEIGHT     ),
-    .ARRAY_WIDTH     ( ARRAY_WIDTH      )
+    .ARRAY_WIDTH     ( BUS_WIDTH_BYTES / DATA_WIDTH_BYTES / 2 )
 ) c_addr_gen (
     .clk        ( c_bus.clk             ),
     .reset_n    ( c_bus.reset_n         ),
