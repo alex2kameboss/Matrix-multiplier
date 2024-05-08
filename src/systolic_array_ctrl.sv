@@ -72,8 +72,8 @@ wire [31 : 0] mxn_result, nxp_result;
 wire [15 : 0] a_count_addr, b_count_addr;
 
 wire [15 : 0] a_half_addr_value, b_half_addr_value;
-assign a_half_addr_value = mxn_result[16 + $clog2(ARRAY_HEIGHT):$clog2(ARRAY_HEIGHT) + 1]; // div ARRAY_HEIGHT * DATA_WIDTH_BYTES * 2 => $clog2(ARRAY_HEIGHT * DATA_WIDTH_BYTES) + 1
-assign b_half_addr_value = nxp_result[20:5]; // div 32 * 2 => 2^6
+assign a_half_addr_value = mxn_result[15 + $clog2(ARRAY_HEIGHT):$clog2(ARRAY_HEIGHT)]; // div ARRAY_HEIGHT * DATA_WIDTH_BYTES * 2 => $clog2(ARRAY_HEIGHT * DATA_WIDTH_BYTES) + 1
+assign b_half_addr_value = nxp_result[15 + $clog2(ARRAY_WIDTH):$clog2(ARRAY_WIDTH)]; // div 32 * 2 => 2^6
 
 
 assign a_half_addr = a_count_addr == a_half_addr_value;

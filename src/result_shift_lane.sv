@@ -14,7 +14,7 @@ module result_shift_lane #(
 
 localparam COUNTER = BUS_WIDTH / DATA_WIDTH;
 //localparam REPLICATION = $rtoi(ARRAY_WIDTH * 1.0 / (BUS_WIDTH / DATA_WIDTH));
-localparam REPLICATION = 4;
+localparam REPLICATION = 16;
 
 logic                                       valid_i;
 logic   [DATA_WIDTH - 1 : 0]                data_i;
@@ -50,10 +50,8 @@ always_ff @( posedge clk or negedge reset_n )
 
 always_ff @( posedge clk or negedge reset_n )
     if ( ~reset_n )                     valid[j] <= 1'b0;           else
-    if ( r_ptr == j ) begin
-        if ( &cnt )                     valid[j] <= 1'b1;           else
-        if ( accepted_i )               valid[j] <= 1'b0;
-    end
+    if ( w_ptr == j & &cnt )            valid[j] <= 1'b1;           else
+    if ( r_ptr == j & accepted_i )      valid[j] <= 1'b0;
     end
 endgenerate
 

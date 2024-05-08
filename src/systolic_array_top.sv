@@ -305,6 +305,19 @@ data_sequencer # (
     .data_o   ( b_mem_data_in           ),
     .valid_o  ( b_mem_bank_valid_data   ) 
 );    
+    end else if ( ARRAY_WIDTH * DATA_WIDTH_BYTES > BUS_WIDTH_BYTES ) begin
+b_data_concat # (
+    .DATA_INPUT_WIDTH  ( BUS_WIDTH_BYTES * 8 ) ,
+    .DATA_OUTPUT_WIDTH ( ARRAY_WIDTH * DATA_WIDTH_BYTES * 8 )  
+) b_data_concat (
+    .clk      ( clk                     ),
+    .reset_n  ( reset_n                 ),
+    .valid_i  ( ~b_data_empty           ),
+    .data_i   ( b_data_buffer_output    ),
+    .accepted ( b_data_fifo_accepted    ),
+    .data_o   ( b_mem_data_in           ),
+    .valid_o  ( b_mem_bank_valid_data   ) 
+);    
     end else begin
 assign b_mem_data_in = b_data_buffer_output;
 assign b_mem_bank_valid_data = ~b_data_empty;
