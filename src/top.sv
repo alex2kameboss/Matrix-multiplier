@@ -20,7 +20,9 @@ logic                       start_apb, start_clk, done_apb, done_clk;
 logic   [1 : 0]             start_sync, done_sync;
 logic                       start_clk_pulse, start_clk_d;
 
-regfile regfile_i (
+regfile #(
+    .ARRAY_HEIGHT( ARRAY_HEIGHT )
+) regfile_i (
     .bus(config_bus),
     .matrix_a_addr_o( a_addr_apb ),
     .matrix_b_addr_o( b_addr_apb ),
