@@ -60,33 +60,35 @@ output  pready,
     @(posedge pclk) disable iff(!preset_n)
     (psel && penable && !pready) |=> (psel && penable && !pready) or (psel && penable && pready) ;
   endproperty
-  
-  property access_last_state;
-    @(posedge pclk) disable iff(!preset_n)
-    (psel && penable && pready) |=> (!psel) or (psel && !penable) ; //TODO:
-  endproperty 
+
+  // omly if no B2B transactions
+  // property access_last_state;
+  //   @(posedge pclk) disable iff(!preset_n)
+  //   (psel && penable && pready) |=> (!psel) or (psel && !penable) ; 
+  // endproperty 
   
   property pr_generic_stable(signal);
     @(posedge pclk) disable iff(!preset_n)
     !$stable(signal) |-> (psel && !penable) or (!psel); //TODO:
   endproperty
   //Some signals need to be treated separately. pwdata needs be stable only during write transfers (pwrite=1):
-  property pwdata_in_wr_transfer;  
+  property pwdata_in_read_transfer;  
     @(posedge pclk) disable iff(!preset_n)
-    !$stable(pwdata) |-> (!pwrite) or ((psel && !penable) or (!psel)) ; //TODO:
+      !$stable(pwdata) |-> (!pwrite) or ((psel && !penable) or (!psel)) ; //TODO:
   endproperty
 
-  property prdata_in_read_transfer;  
+  property prdata_in_wr_transfer;  
     @(posedge pclk) disable iff(!preset_n)
-    !$stable(prdata) |=> (pwrite) or ((psel && !penable) or (!psel)) ;
+      !$stable(prdata) |=> (pwrite) or ((psel && !penable) or (!psel)) ;
   endproperty
 
-  //The psel signal must be stable (=1) throughout the transfer, while penable signal must be stable (=1) during the whole access_phase.
+  
   property penable_in_transfer;
     @(posedge pclk) disable iff(!preset_n)
     $fell(penable) |-> (!psel) or ($past(penable) && $past(pready)) ;
   endproperty
-  
+    
+  //The psel signal must be stable (=1) throughout the transfer, while penable signal must be stable (=1) during the whole access_phase.
   property psel_stable_in_transfer;
     @(posedge pclk) disable iff(!preset_n)
     !psel && $past(psel) |-> $past(penable) && $past(pready) ; 
@@ -109,8 +111,8 @@ output  pready,
         $error("[%0t] APB PROTOCOL VIOLATION: setup_state assertion failed! SETUP STATE!", $time);
       assert property (access_wait_state) else
         $error("[%0t] APB PROTOCOL VIOLATION: access_wait_state assertion failed! ACCESS_WAIT_STATE!", $time);
-      assert property (access_last_state) else
-        $error("[%0t] APB PROTOCOL VIOLATION: pr_generic_stable assertion failed! ACCESS_LAST_STATE!", $time);
+      // assert property (access_last_state) else
+      //   $error("[%0t] APB PROTOCOL VIOLATION: pr_generic_stable assertion failed! ACCESS_LAST_STATE!", $time);
       assert property (pr_generic_stable(paddr)) else
         $error("[%0t] APB PROTOCOL VIOLATION: pr_generic_stable assertion failed! PADDR change state during transfer!", $time);
       assert property (pr_generic_stable(pwdata)) else
