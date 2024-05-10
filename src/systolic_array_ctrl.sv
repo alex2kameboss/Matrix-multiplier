@@ -129,12 +129,12 @@ logic b_start_reg, a_start_reg;
 always_ff @(posedge clk or negedge reset_n)
     if ( ~reset_n )                 a_start_reg <= 1'b0;        else
     if ( data_done )                a_start_reg <= 1'b0;        else
-    if ( a_half_mem | a_half_addr ) a_start_reg <= 1'b1;
+    if ( (a_half_mem | a_half_addr) & |mxn_result) a_start_reg <= 1'b1;
 
 always_ff @(posedge clk or negedge reset_n)
     if ( ~reset_n )                 b_start_reg <= 1'b0;        else
     if ( data_done )                b_start_reg <= 1'b0;        else
-    if ( b_half_mem | b_half_addr ) b_start_reg <= 1'b1;
+    if ( (b_half_mem | b_half_addr) & |nxp_result ) b_start_reg <= 1'b1;
 
 always_ff @(posedge clk or negedge reset_n)
     if ( ~reset_n )                                                         array_start <= 1'b0;            else
