@@ -44,7 +44,7 @@ begin
     cfg.psel    = 1'b1;
     @(posedge clk);
     @(posedge clk);
-    cfg.psel    = 1'b1;
+    cfg.psel    = 1'b0;
     cfg.pwdata  = 'dx;
     cfg.paddr   = 'dx;
 end
@@ -66,6 +66,8 @@ begin
     apb_write_tran(3'd6, 'd1);
 
     @(posedge dut.done_apb);
+    @(posedge clk);
+    @(posedge clk);
 end
 endtask
 
