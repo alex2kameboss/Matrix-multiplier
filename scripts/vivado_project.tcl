@@ -1,24 +1,44 @@
-# usage: vivado -mode tcl -source Matrix-multiplier/scripts/vivado_project.tcl -nojournal -nolog
+# usage: vivado -mode tcl -source Matrix-multiplier/scripts/vivado_project.tcl -nojournal -nolog -tclargs '-noGui'
 
+# parameters
+package require cmdline
+
+set parameters {
+    {threads.arg    "4"     "Number of threads for synthesis, in range [1, 4]"}
+    {noXilinx               "Do not use Xilinx macros, default off"}
+    {arraySize.arg  "16"    "Systolic array size, default"}
+    {noGui                  "Do not open gui in the end, defualt off"}
+}
+#set option(l) 100
+set usage "- Script to simplify systolic array design exploration"
+
+puts $::argv
+
+if {[catch {array set options [cmdline::getoptions ::argv $parameters $usage]}]} {
+    puts [cmdline::usage $parameters $usage]
+    exit
+}
+
+# script
 set scriptPath      [file normalize [info script]]
 set scriptDir       [file dirname $scriptPath]
 set srcDir          $scriptDir/../src
 set interfacesDir   $scriptDir/../interfaces
 
 # project parameters
-set useXilinx       1
+set noXilinx        $options(noXilinx)
 set dataWidth       8
-set arrayWidth      16
+set arrayWidth      $options(arraySize)
 set memAddrWidth    16
 
 # create project for VCU128
-create_project Matrix-Multiplier-Vivado $scriptDir/../../Matrix-Multiplier-Vivado -part xcvu37p-fsvh2892-2L-e
+create_project Matrix-Multiplier-Vivado-$arrayWidth $scriptDir/../../Matrix-Multiplier-Vivado-$arrayWidth -part xcvu37p-fsvh2892-2L-e
 set_property board_part xilinx.com:vcu128:part0:1.0 [current_project]
 
 # list of sv files
 set interfacesFiles [glob -directory $interfacesDir *.sv]
 set srcFiles        [glob -directory $srcDir *.sv]
-if { !$useXilinx } {
+if { $noXilinx } {
     set asyncFifoFiles  [glob -directory $srcDir/async_fifo *.sv]
     add_files -norecurse $asyncFifoFiles
 }
@@ -133,10 +153,16 @@ synth_ip [get_ips]
 
 # run synthesys
 #launch_runs synth_1 -jobs 8; # 4 cores
-set_param general.maxThreads 4
+set_param general.maxThreads $options(threads)
 synth_design
 
-start_gui
+if { !$options(noGui) } {
+    start_gui
+}
 
 refresh_design
-report_utilization -name utilization_1
+report_utilization -hierarchical  -file $scriptDir/../../Matrix-Multiplier-Vivado-$arrayWidth/utilization_report.txt
+
+if { $options(noGui) } {
+    exit
+}
