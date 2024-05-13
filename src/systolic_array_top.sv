@@ -25,12 +25,16 @@ module systolic_array_top #(
     output                                  operation_done  
 );
     
+`ifndef MEM_ADDR_WIDTH
+    `define MEM_ADDR_WIDTH 16
+`endif
+
 localparam MEM_DATA_WIDTH_BYTES     = 32;
 localparam BUFFER_ADDRESS_WIDTH     = 16;
 localparam ADDRESS_WIDTH            = 16;
 localparam MEM_FIFO_DEPTH           = 512;
-localparam MEM_ADD_WIRDTH           = 16;
-localparam MEM_SIZE                 = 1 << MEM_ADD_WIRDTH;
+localparam MEM_ADDR_WIDTH           = `MEM_ADDR_WIDTH;
+localparam MEM_SIZE                 = 1 << MEM_ADDR_WIDTH;
 localparam A_MEM_BANK_DATA_WIDTH    = ARRAY_HEIGHT * DATA_WIDTH_BYTES * 8;
 
 wire                                    start_i_c_bus, ooperation_done_c_bus;
@@ -450,6 +454,8 @@ array_results_controller #(
     .done         ( array_done      )                            
 );
 
+`ifndef XILINX
+
 async_fifo #(
     .DATA_WIDTH( BUS_WIDTH_BYTES * 8 ),
     .FIFO_DEPTH( MEM_SIZE )
@@ -465,6 +471,23 @@ async_fifo #(
     .r_empty_o   ( r_result_empty       ),
     .r_data      ( r_result_data_fifo   ) 
 );
+
+`else
+
+result_data_fifo c_data_fifo (
+    .wr_clk ( clk                   ) ,
+    .wr_rst ( reset_n               ) ,
+    .rd_clk ( c_bus.clk             ) ,
+    .rd_rst ( c_bus.reset_n         ) ,
+    .din    ( w_result_data         ) ,
+    .wr_en  ( w_result_valid        ) ,
+    .rd_en  ( c_data_fifo_incr      ) ,
+    .dout   ( r_result_data_fifo    ) ,
+    .full   (                       ) , // nc
+    .empty  ( r_result_empty        ) 
+);
+
+`endif
 
 mem_c_addresses_generator #(
     .BUS_WIDTH_BYTES ( BUS_WIDTH_BYTES  ),

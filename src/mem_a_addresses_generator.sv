@@ -112,6 +112,7 @@ always_ff @(posedge clk or negedge reset_n)
 
 always_ff @(posedge clk or negedge reset_n)
     if ( ~reset_n )         a_cycles <= 'd0;                        else
+    if ( a_store_data )     a_cycles <= 'd0;                        else
     if ( a_send_addr )      a_cycles <= a_cycles + 'd1;             else
     if ( a_store_new_col )  a_cycles <= 'd0;                        else
     if ( a_store_new_row )  a_cycles <= 'd0;                        
