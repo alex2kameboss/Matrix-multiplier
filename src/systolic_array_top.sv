@@ -26,10 +26,10 @@ module systolic_array_top #(
 );
     
 localparam MEM_DATA_WIDTH_BYTES     = 32;
-localparam BUFFER_ADDRESS_WIDTH     = 10;
+localparam BUFFER_ADDRESS_WIDTH     = 16;
 localparam ADDRESS_WIDTH            = 16;
-localparam MEM_FIFO_DEPTH           = 128;
-localparam MEM_ADD_WIRDTH           = 10;
+localparam MEM_FIFO_DEPTH           = 512;
+localparam MEM_ADD_WIRDTH           = 16;
 localparam MEM_SIZE                 = 1 << MEM_ADD_WIRDTH;
 localparam A_MEM_BANK_DATA_WIDTH    = ARRAY_HEIGHT * DATA_WIDTH_BYTES * 8;
 
@@ -291,7 +291,8 @@ mem_block b_mem_bank (
 );
 
 `endif
-
+generate
+    if ( ARRAY_WIDTH * DATA_WIDTH_BYTES < BUS_WIDTH_BYTES ) begin
 data_sequencer # (
     .DATA_INPUT_WIDTH  ( BUS_WIDTH_BYTES * 8 ) ,
     .DATA_OUTPUT_WIDTH ( ARRAY_WIDTH * DATA_WIDTH_BYTES * 8 )  
@@ -303,7 +304,26 @@ data_sequencer # (
     .accepted ( b_data_fifo_accepted    ),
     .data_o   ( b_mem_data_in           ),
     .valid_o  ( b_mem_bank_valid_data   ) 
-);
+);    
+    end else if ( ARRAY_WIDTH * DATA_WIDTH_BYTES > BUS_WIDTH_BYTES ) begin
+b_data_concat # (
+    .DATA_INPUT_WIDTH  ( BUS_WIDTH_BYTES * 8 ) ,
+    .DATA_OUTPUT_WIDTH ( ARRAY_WIDTH * DATA_WIDTH_BYTES * 8 )  
+) b_data_concat (
+    .clk      ( clk                     ),
+    .reset_n  ( reset_n                 ),
+    .valid_i  ( ~b_data_empty           ),
+    .data_i   ( b_data_buffer_output    ),
+    .accepted ( b_data_fifo_accepted    ),
+    .data_o   ( b_mem_data_in           ),
+    .valid_o  ( b_mem_bank_valid_data   ) 
+);    
+    end else begin
+assign b_mem_data_in = b_data_buffer_output;
+assign b_mem_bank_valid_data = ~b_data_empty;
+assign b_data_fifo_accepted = b_mem_bank_valid_data;
+    end
+endgenerate
 
 array_b_addresses_generator #(
     .ARRAY_HEIGHT        ( ARRAY_HEIGHT         ),
@@ -432,7 +452,7 @@ array_results_controller #(
 
 async_fifo #(
     .DATA_WIDTH( BUS_WIDTH_BYTES * 8 ),
-    .FIFO_DEPTH( 256 )
+    .FIFO_DEPTH( MEM_SIZE )
 ) c_data_fifo (
     .w_clk       ( clk                  ),
     .w_reset_n   ( reset_n              ),
@@ -450,7 +470,7 @@ mem_c_addresses_generator #(
     .BUS_WIDTH_BYTES ( BUS_WIDTH_BYTES  ),
     .DATA_WIDTH_BYTES( DATA_WIDTH_BYTES * 2 ),
     .ARRAY_HEIGHT    ( ARRAY_HEIGHT     ),
-    .ARRAY_WIDTH     ( ARRAY_WIDTH      )
+    .ARRAY_WIDTH     ( BUS_WIDTH_BYTES / DATA_WIDTH_BYTES / 2 )
 ) c_addr_gen (
     .clk        ( c_bus.clk             ),
     .reset_n    ( c_bus.reset_n         ),

@@ -17,8 +17,11 @@ module mem_bank_address_generator #(
     output  reg [BUFFER_ADDRESS_WIDTH - 1 : 0]  addr_o          ,
     // internal control unit
     output  reg [15 : 0]                        global_counts   ,
+    output                                      limit_pass      ,
     input                                       clear              
 );
+
+assign limit_pass = global_counts[BUFFER_ADDRESS_WIDTH - 1];
 
 localparam BURST = BUS_WIDTH_BYTES / DATA_WIDTH_BYTES / ARRAY_WIDTH;
 
@@ -29,10 +32,10 @@ logic   [15 : 0]                        row, row_1;
 
 assign burst_1      =   burst + 1'b1;
 assign burst_done   =   &burst & ~|burst_1;
-assign addr_next    =   addr_o + n;
+assign addr_next    =   addr_o + p;
 assign addr_base_1  =   addr_base + 1'b1;
 assign row_1        =   row + 1'b1;
-assign row_done     =   row == n & burst_done;
+assign row_done     =   row == (n - 1'b1) & burst_done;
 
 always_ff @( posedge clk or negedge reset_n )
     if ( ~reset_n )                     addr_o <= 'd0;              else
@@ -55,6 +58,7 @@ always_ff @( posedge clk or negedge reset_n )
 always_ff @( posedge clk or negedge reset_n )
     if ( ~reset_n )                     row <= 'd0;                 else
     if ( start_i )                      row <= 'd0;                 else
+    if ( row_done )                     row <= 'd0;                 else
     if ( burst_done )                   row <= row_1;
 
 always_ff @(posedge clk or negedge reset_n)

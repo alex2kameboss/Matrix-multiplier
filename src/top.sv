@@ -13,21 +13,25 @@ module top #(
     input                       reset_n     
 );
     
-wire    [15 : 0]    a_addr, b_addr, c_addr, m, n, p;
-wire                start_apb, start_clk, done_apb, done_clk;
-logic   [1 : 0]     start_sync, done_sync;
-logic               start_clk_pulse, start_clk_d;
+logic   [15 : 0]            a_addr_apb, b_addr_apb, c_addr_apb, m_apb, n_apb, p_apb;
+logic   [15 : 0]            a_addr_clk, b_addr_clk, c_addr_clk, m_clk, n_clk, p_clk;
+logic   [6 * 16 - 1 : 0]    data_syncronizer [1 : 0];
+logic                       start_apb, start_clk, done_apb, done_clk;
+logic   [1 : 0]             start_sync, done_sync;
+logic                       start_clk_pulse, start_clk_d;
 
-regfile regfile_i (
+regfile #(
+    .ARRAY_HEIGHT( ARRAY_HEIGHT )
+) regfile_i (
     .bus(config_bus),
-    .matrix_a_addr_o( a_addr    ),
-    .matrix_b_addr_o( b_addr    ),
-    .matrix_c_addr_o( c_addr    ),
-    .m_o            ( m         ),
-    .n_o            ( n         ),
-    .p_o            ( p         ),
-    .start_o        ( start_apb ),
-    .end_i          ( done_apb  )                    
+    .matrix_a_addr_o( a_addr_apb ),
+    .matrix_b_addr_o( b_addr_apb ),
+    .matrix_c_addr_o( c_addr_apb ),
+    .m_o            ( m_apb      ),
+    .n_o            ( n_apb      ),
+    .p_o            ( p_apb      ),
+    .start_o        ( start_apb  ),
+    .end_i          ( done_apb   )                    
 );
 
 systolic_array_top #(
@@ -43,12 +47,12 @@ systolic_array_top #(
     .clk           ( clk                ),
     .reset_n       ( reset_n            ),
     .start_i       ( start_clk_pulse    ),
-    .m             ( m                  ),
-    .n             ( n                  ),
-    .p             ( p                  ),
-    .base_addr_a   ( a_addr             ),
-    .base_addr_b   ( b_addr             ),
-    .base_addr_c   ( c_addr             ),
+    .m             ( m_clk              ),
+    .n             ( n_clk              ),
+    .p             ( p_clk              ),
+    .base_addr_a   ( a_addr_clk         ),
+    .base_addr_b   ( b_addr_clk         ),
+    .base_addr_c   ( c_addr_clk         ),
     .operation_done( done_clk           )
 );
 
@@ -66,8 +70,22 @@ always_ff @( posedge config_bus.pclk or negedge config_bus.preset_n )
                                     done_sync <= { done_clk, done_sync[1] };
 assign done_apb = done_sync[0];       
 
+always_ff @( posedge clk or negedge reset_n )
+    if ( ~reset_n ) begin
+        data_syncronizer[0] <= 'd0;
+        data_syncronizer[1] <= 'd0;
+    end else begin
+        data_syncronizer[1] <= {a_addr_apb, b_addr_apb, c_addr_apb, m_apb, n_apb, p_apb};
+        data_syncronizer[0] <= data_syncronizer[1];
+    end
+
+always_ff @( posedge clk or negedge reset_n )
+    if ( ~reset_n )                 {a_addr_clk, b_addr_clk, c_addr_clk, m_clk, n_clk, p_clk} <= 'd0;       else
+    if ( start_clk & ~start_clk_d ) {a_addr_clk, b_addr_clk, c_addr_clk, m_clk, n_clk, p_clk} = data_syncronizer[0];
+
 // start pulse generator
-assign start_clk_pulse = start_clk & ~start_clk_d;
+always_ff @( posedge clk )
+    start_clk_pulse = start_clk & ~start_clk_d;
 always_ff @( posedge clk )
     start_clk_d <= start_clk;                
 

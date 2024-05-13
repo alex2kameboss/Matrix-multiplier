@@ -72,8 +72,8 @@ wire [31 : 0] mxn_result, nxp_result;
 wire [15 : 0] a_count_addr, b_count_addr;
 
 wire [15 : 0] a_half_addr_value, b_half_addr_value;
-assign a_half_addr_value = {{$clog2(ARRAY_HEIGHT){1'b0}}, mxn_result[15:$clog2(ARRAY_HEIGHT)]}; // div ARRAY_HEIGHT * DATA_WIDTH_BYTES * 2 => $clog2(ARRAY_HEIGHT * DATA_WIDTH_BYTES) + 1
-assign b_half_addr_value = {5'd0, nxp_result[15:5]}; // div 32 * 2 => 2^6
+assign a_half_addr_value = mxn_result[15 + $clog2(ARRAY_HEIGHT):$clog2(ARRAY_HEIGHT)]; // div ARRAY_HEIGHT * DATA_WIDTH_BYTES * 2 => $clog2(ARRAY_HEIGHT * DATA_WIDTH_BYTES) + 1
+assign b_half_addr_value = nxp_result[15 + $clog2(ARRAY_WIDTH):$clog2(ARRAY_WIDTH)]; // div 32 * 2 => 2^6
 
 
 assign a_half_addr = a_count_addr == a_half_addr_value;
@@ -90,17 +90,8 @@ buffer_write_address_generator #(.BUFFER_ADDRESS_WIDTH(BUFFER_ADDRESS_WIDTH)) a_
     .clear(data_done)
 );
 
-//buffer_write_address_generator #(.BUFFER_ADDRESS_WIDTH(BUFFER_ADDRESS_WIDTH)) b_buf_addr_i (
-//    .clk(clk),
-//    .reset_n(reset_n),
-//    .start_i(start_i),
-//    .count_up(b_valid_data),
-//    .global_counts(b_count_addr),
-//    .address(b_buffer_addr),
-//    .limit_pass(b_half_mem),
-//    .clear(data_done)
-//);
-
+generate
+    if ( ARRAY_WIDTH * DATA_WIDTH_BYTES < BUS_WIDTH_BYTES ) begin
 mem_bank_address_generator #(
     .ARRAY_WIDTH         ( ARRAY_WIDTH          ),
     .DATA_WIDTH_BYTES    ( DATA_WIDTH_BYTES     ),
@@ -115,21 +106,35 @@ mem_bank_address_generator #(
     .valid_i        ( b_valid_data     ),
     .addr_o         ( b_buffer_addr    ),
     .global_counts  ( b_count_addr     ),
+    .limit_pass     ( b_half_mem       ),
     .clear          ( data_done        )
 
 );
+    end else begin
+buffer_write_address_generator #(.BUFFER_ADDRESS_WIDTH(BUFFER_ADDRESS_WIDTH)) b_buf_addr_i (
+    .clk(clk),
+    .reset_n(reset_n),
+    .start_i(start_i),
+    .count_up(b_valid_data),
+    .global_counts(b_count_addr),
+    .address(b_buffer_addr),
+    .limit_pass(b_half_mem),
+    .clear(data_done)
+);
+end
+endgenerate
 
 logic b_start_reg, a_start_reg;
 
 always_ff @(posedge clk or negedge reset_n)
     if ( ~reset_n )                 a_start_reg <= 1'b0;        else
     if ( data_done )                a_start_reg <= 1'b0;        else
-    if ( a_half_mem | a_half_addr ) a_start_reg <= 1'b1;
+    if ( (a_half_mem | a_half_addr) & |mxn_result) a_start_reg <= 1'b1;
 
 always_ff @(posedge clk or negedge reset_n)
     if ( ~reset_n )                 b_start_reg <= 1'b0;        else
     if ( data_done )                b_start_reg <= 1'b0;        else
-    if ( b_half_mem | b_half_addr ) b_start_reg <= 1'b1;
+    if ( (b_half_mem | b_half_addr) & |nxp_result ) b_start_reg <= 1'b1;
 
 always_ff @(posedge clk or negedge reset_n)
     if ( ~reset_n )                                                         array_start <= 1'b0;            else
