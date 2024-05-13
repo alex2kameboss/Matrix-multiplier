@@ -1,10 +1,14 @@
 module wrapper(
-    input           clk     ,
-    input           rst_n   
+    input           clk             ,
+    input           rst_n           ,
+    input           bus_data_clk    ,
+    input           bus_data_rst_n  ,
+    input           config_clk      ,
+    input           config_rst_n       
 );
 
-memory_interface    a_bus(clk, reset_n), b_bus(clk, reset_n), c_bus(clk, reset_n);
-apb_interface       config_bus(clk, reset_n);   
+memory_interface    a_bus(bus_data_clk, bus_data_rst_n), b_bus(bus_data_clk, bus_data_rst_n), c_bus(bus_data_clk, bus_data_rst_n);
+apb_interface       config_bus(config_clk, config_rst_n);   
 
 mem_mock_gen gen_a(.bus(a_bus));
 mem_mock_gen gen_b(.bus(b_bus));

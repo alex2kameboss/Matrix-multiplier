@@ -5,6 +5,12 @@ set scriptDir       [file dirname $scriptPath]
 set srcDir          $scriptDir/../src
 set interfacesDir   $scriptDir/../interfaces
 
+# project parameters
+set useXilinx       1
+set dataWidth       8
+set arrayWidth      16
+set memAddrWidth    16
+
 # create project for VCU128
 create_project Matrix-Multiplier-Vivado $scriptDir/../../Matrix-Multiplier-Vivado -part xcvu37p-fsvh2892-2L-e
 set_property board_part xilinx.com:vcu128:part0:1.0 [current_project]
@@ -12,10 +18,14 @@ set_property board_part xilinx.com:vcu128:part0:1.0 [current_project]
 # list of sv files
 set interfacesFiles [glob -directory $interfacesDir *.sv]
 set srcFiles        [glob -directory $srcDir *.sv]
-set asyncFifoFiles  [glob -directory $srcDir/async_fifo *.sv]
+if { !$useXilinx } {
+    set asyncFifoFiles  [glob -directory $srcDir/async_fifo *.sv]
+    add_files -norecurse $asyncFifoFiles
+}
 
+add_files -norecurse $scriptDir/../vivado_wrapper/wrapper.sv
+add_files -norecurse $scriptDir/../vivado_wrapper/mem_mock_gen.sv
 add_files -norecurse $interfacesFiles
-add_files -norecurse $asyncFifoFiles
 add_files -norecurse $srcFiles
 
 update_compile_order -fileset sources_1
@@ -23,11 +33,13 @@ update_compile_order -fileset sources_1
 # add constraints file
 add_files -fileset constrs_1 -norecurse $scriptDir/../constraints/constraints.xdc
 
-# run synthesys
-#launch_runs synth_1 -jobs 8; # 4 cores
-
 # set define:  set_property verilog_define abc=def [current_fileset]
-set_property verilog_define XILINX=1 [current_fileset]
+set_property verilog_define [list \
+    XILINX=1  \
+    "A_WIDTH=$arrayWidth" \
+    "A_HEIGHT=$arrayWidth" \
+    "MEM_ADDR_WIDTH=$memAddrWidth"
+] [current_fileset]
 
 # create xilinx IPs
 
@@ -99,8 +111,32 @@ set_property -dict [list \
   CONFIG.Memory_Type {Simple_Dual_Port_RAM} \
   CONFIG.Operating_Mode_A {READ_FIRST} \
   CONFIG.Register_PortB_Output_of_Memory_Primitives {false} \
-  CONFIG.Write_Depth_A {1024} \
-  CONFIG.Write_Width_A {128} \
+  CONFIG.Write_Depth_A [list [expr int(pow($memAddrWidth, 2))]] \
+  CONFIG.Write_Width_A [list [expr int($arrayWidth * $dataWidth)]] \
 ] [get_ips mem_block]
 
+# create result_data_fifo
+create_ip -name fifo_generator -vendor xilinx.com -library ip -version 13.2 -module_name result_data_fifo
+set_property -dict [list \
+  CONFIG.Component_Name {result_data_fifo} \
+  CONFIG.Enable_Reset_Synchronization {false} \
+  CONFIG.Fifo_Implementation {Independent_Clocks_Block_RAM} \
+  CONFIG.Input_Data_Width {256} \
+  CONFIG.Input_Depth {4096} \
+  CONFIG.Reset_Pin {true} \
+  CONFIG.Use_Embedded_Registers {false} \
+] [get_ips result_data_fifo]
+
+# generate IPs
+generate_target all [get_ips]
+synth_ip [get_ips]
+
+# run synthesys
+#launch_runs synth_1 -jobs 8; # 4 cores
+set_param general.maxThreads 4
+synth_design
+
 start_gui
+
+refresh_design
+report_utilization -name utilization_1
