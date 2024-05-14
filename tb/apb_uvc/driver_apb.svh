@@ -16,33 +16,65 @@ class driver_apb extends uvm_driver #(apb_transaction);
     end
   endfunction
   
-  virtual task run_phase(uvm_phase phase);
-    super.run_phase(phase);
-    forever begin
-      `uvm_info("DRIVER_APB", $sformatf("Se asteapta o tranzactie de la sequencer"), UVM_LOW)
-      seq_item_port.get_next_item(req);
-      `uvm_info("DRIVER_APB", $sformatf("S-a primit o tranzactie de la sequencer"), UVM_LOW)
-      send_transaction(req);
-      `uvm_info("DRIVER_APB", $sformatf("Tranzactia a fost transmisa pe interfata"), UVM_LOW)
-      seq_item_port.item_done();
-    end
-  endtask
-  
-  task send_transaction(apb_transaction apb_item);
-    $timeformat(-9, 2, " ns", 20);//cand se va afisa in consola timpul, folosind directiva %t timpul va fi afisat in nanosecunde (-9), cu 2 zecimale, iar dupa valoare se va afisa abrevierea " ns"
-    apb_interface_instance.cb_drv.psel   <= 'b1;
-    apb_interface_instance.cb_drv.paddr  <= apb_item.addr;
-    apb_interface_instance.cb_drv.pwrite <= apb_item.write;
-    
-    if(apb_item.write)
+
+//--------------------------task pentru initializarea semnalelor cu 0----------------
+    task init();
+      apb_interface_instance.cb_drv.psel    <= 0;
+      apb_interface_instance.cb_drv.penable <= 0;
+      apb_interface_instance.cb_drv.pwrite  <= 0;
+      apb_interface_instance.cb_drv.paddr   <= 0;
+      apb_interface_instance.cb_drv.pwdata  <= 0;
+    endtask
+
+//------------------------------------Run phase---------------------------------------
+    virtual task run_phase (uvm_phase phase);
+
+      apb_transaction apb_item;
+      init();
+      @(posedge apb_interface_instance.preset_n);    
+      @(apb_interface_instance.cb_drv);
+
+      forever begin   
+         seq_item_port.get_next_item (apb_item);
+        // repeat(apb_item.delay) @(apb_interface_instance.cb_drv);
+         case(apb_item.write)
+             1'b0:read  (apb_item);
+             1'b1:write (apb_item);
+         endcase
+
+         seq_item_port.item_done ();
+         seq_item_port.put_response(apb_item);
+      end
+   endtask
+
+//-------------------------task for read trasnfer when trans is 0---------------------
+
+virtual task read ( inout apb_transaction  apb_item);
+      apb_interface_instance.cb_drv.psel    <= 1;
+      apb_interface_instance.cb_drv.pwrite  <= apb_item.write;
+      apb_interface_instance.cb_drv.paddr   <= apb_item.addr;
+      @(apb_interface_instance.cb_drv);
+      apb_interface_instance.cb_drv.penable <= 1;
+      @(apb_interface_instance.cb_drv iff apb_interface_instance.cb_drv.pready);
+      apb_item.data                        = apb_interface_instance.cb_drv.prdata;
+      apb_interface_instance.cb_drv.penable <= 0;
+      apb_interface_instance.cb_drv.psel    <= 0;
+      
+   endtask
+
+//------------------------task for write trasnfer when trans is 1----------------------- 
+
+virtual task write (apb_transaction apb_item );
+      apb_interface_instance.cb_drv.psel    <= 1;
+      apb_interface_instance.cb_drv.pwrite <= apb_item.write;
+      apb_interface_instance.cb_drv.paddr  <= apb_item.addr;
       apb_interface_instance.cb_drv.pwdata <= apb_item.data;
-    
-    @( apb_interface_instance.cb_drv iff apb_interface_instance.cb_drv.pready);
-      apb_interface_instance.cb_drv.psel    <= 'b0;
-      apb_interface_instance.cb_drv.penable <= 'b0;
-      apb_interface_instance.cb_drv.pwdata  <= 'bx;
-      apb_interface_instance.cb_drv.paddr   <= 'bx;
-      apb_interface_instance.cb_drv.pwrite  <= 'bx;
-  endtask
-  
+      @(apb_interface_instance.cb_drv);
+      apb_interface_instance.cb_drv.penable <=1;
+      @(apb_interface_instance.cb_drv iff apb_interface_instance.cb_drv.pready);
+      apb_interface_instance.cb_drv.penable <= 0;
+      apb_interface_instance.cb_drv.psel    <= 0;
+
+   endtask
+
 endclass
