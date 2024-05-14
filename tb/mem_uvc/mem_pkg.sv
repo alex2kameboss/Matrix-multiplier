@@ -13,6 +13,7 @@ package mem_pkg;
   `include "mem_monitor_b.svh"
   `include "mem_monitor_c.svh"
   `include "mem_agent.svh"
+  `include "mem_seq_lib.svh"
 
 endpackage
 

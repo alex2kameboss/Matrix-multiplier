@@ -38,11 +38,10 @@ class mem_driver_a extends uvm_driver #(mem_transaction);
     
     $display("%0t mem_driver_a", $time());
     @(posedge memory_interface_instance.cb_drv_a.req)
-    memory_interface_instance.ack           <= 'b1;
-    if(~memory_interface_instance.cb_drv_a.w_en) begin
+    memory_interface_instance.cb_drv_a.ack  <= 'b1;
+    if(~memory_interface_instance.cb_drv_a.w_en)
       memory_interface_instance.cb_drv_a.data <= mem_item.data;
-    end
-    @(memory_interface_instance.clk);
+    @(memory_interface_instance.cb_drv_a);
     memory_interface_instance.cb_drv_a.ack <= 'b0;
     
     $display("mem_driver_a, dupa transmisie; [T=%0t]", $realtime);

@@ -38,8 +38,8 @@ class mem_driver_c extends uvm_driver #(mem_transaction);
     
 	@(posedge memory_interface_instance.cb_drv_c.req)
     $display("%0t mem_driver_c", $time());
-    memory_interface_instance.ack             <= 'b1;
-    @(memory_interface_instance.clk);
+    memory_interface_instance.cb_drv_c.ack    <= 'b1;
+    @(memory_interface_instance.cb_drv_c);
     memory_interface_instance.cb_drv_c.ack    <= 'b0;
     
     $display("mem_driver_c, dupa transmisie; [T=%0t]", $realtime);
