@@ -43,7 +43,9 @@ begin
     cfg.pwrite  = 1'b1;
     cfg.psel    = 1'b1;
     @(posedge clk);
+    cfg.penable = 1'b1;
     @(posedge clk);
+    cfg.penable = 1'b0;
     cfg.psel    = 1'b0;
     cfg.pwdata  = 'dx;
     cfg.paddr   = 'dx;

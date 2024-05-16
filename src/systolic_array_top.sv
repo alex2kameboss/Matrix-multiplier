@@ -25,12 +25,16 @@ module systolic_array_top #(
     output                                  operation_done  
 );
     
+`ifndef MEM_ADDR_WIDTH
+    `define MEM_ADDR_WIDTH 16
+`endif
+
 localparam MEM_DATA_WIDTH_BYTES     = 32;
 localparam BUFFER_ADDRESS_WIDTH     = 16;
 localparam ADDRESS_WIDTH            = 16;
-localparam MEM_FIFO_DEPTH           = 512;
-localparam MEM_ADD_WIRDTH           = 16;
-localparam MEM_SIZE                 = 1 << MEM_ADD_WIRDTH;
+localparam MEM_FIFO_DEPTH           = 8192;
+localparam MEM_ADDR_WIDTH           = `MEM_ADDR_WIDTH;
+localparam MEM_SIZE                 = 1 << MEM_ADDR_WIDTH;
 localparam A_MEM_BANK_DATA_WIDTH    = ARRAY_HEIGHT * DATA_WIDTH_BYTES * 8;
 
 wire                                    start_i_c_bus, ooperation_done_c_bus;
@@ -72,7 +76,7 @@ memory_ctrl a_data_ctrl (
 
 async_fifo #(
     .DATA_WIDTH( ADDRESS_WIDTH ),
-    .FIFO_DEPTH( MEM_FIFO_DEPTH )
+    .FIFO_DEPTH( 64 )
 ) a_address_fifo (
     .w_clk       ( clk                  ),
     .w_reset_n   ( reset_n              ),
@@ -210,7 +214,7 @@ memory_ctrl b_data_ctrl (
 
 async_fifo #(
     .DATA_WIDTH( ADDRESS_WIDTH ),
-    .FIFO_DEPTH( MEM_FIFO_DEPTH )
+    .FIFO_DEPTH( 64 )
 ) b_address_fifo (
     .w_clk       ( clk                  ),
     .w_reset_n   ( reset_n              ),
@@ -364,10 +368,10 @@ systolic_array_ctrl #(
     .base_addr_b     ( base_addr_b              ),
     .a_mem_fifo_addr ( a_addr_fifo_in           ),
     .a_mem_fifo_incr ( a_addr_inc               ),
-    .a_mem_fifo_full ( a_addr_full              ),
+    .a_mem_fifo_full ( a_addr_full | a_data_full),
     .b_mem_fifo_addr ( b_addr_fifo_in           ),
     .b_mem_fifo_incr ( b_addr_inc               ),
-    .b_mem_fifo_full ( b_addr_full              ),
+    .b_mem_fifo_full ( b_addr_full | b_data_full),
     .a_valid_data    ( a_mem_bank_valid_data    ),
     .a_buffer_addr   ( a_w_mem_bank_address     ),
     .b_valid_data    ( b_mem_bank_valid_data    ),

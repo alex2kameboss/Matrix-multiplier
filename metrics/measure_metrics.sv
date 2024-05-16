@@ -4,6 +4,13 @@ logic clk, reset_n, start;
 memory_interface a_bus(clk, reset_n), b_bus(clk, reset_n), c_bus(clk, reset_n);
 reg [15 : 0] m, n, p;
 
+`ifdef BATCH
+initial begin
+    $dumpfile("waves.vcd");
+    $dumpvars(3, measure_metrics);
+end
+`endif
+
 `ifndef A_WIDTH
     `define A_WIDTH 16
 `endif
@@ -113,7 +120,12 @@ initial begin
     measure_operation('d1024);
     /*measure_operation('d2048);
     measure_operation('d4096);*/
+
+`ifdef BATCH
+    $finish();
+`else
     $stop();
+`endif
 end
 
 endmodule
