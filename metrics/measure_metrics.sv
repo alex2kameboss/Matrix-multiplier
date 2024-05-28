@@ -50,10 +50,11 @@ always_ff @(posedge c_bus.clk or negedge c_bus.reset_n)
 
 // metrics
 
-int a_req, b_req, c_req, cycles;
-logic count_cycles;
+int a_req, b_req, c_req, cycles, all;
+logic count_cycles, count_all;
 
 initial begin
+    $display("%d, %d", `A_HEIGHT, `A_WIDTH);
     clk = 1'b1;
     forever begin
         #5 clk = ~clk;
@@ -72,6 +73,9 @@ always @(posedge c_bus.req)
 always @(posedge clk)
     if ( count_cycles ) cycles <= cycles + 1;
 
+always @(posedge clk)
+    if ( count_all )    all <= all + 1;
+
 task measure_operation;
 input   [15 : 0]    size;
 begin
@@ -83,7 +87,9 @@ begin
     b_req <= 0;
     c_req <= 0;
     cycles <= 0;
+    all <= 0;
 
+    count_all = 1'b1;
     @(posedge clk);
     start = 1'b1;
     @(posedge clk);
@@ -95,17 +101,22 @@ begin
     count_cycles <= 1'b0;
 
     @(posedge dut.ooperation_done_c_bus);
+    count_all = 1'b0;
     @(posedge clk);
     @(posedge clk);
 
-    $display("%0d,%0d,%0d,%0d,%0d", size, a_req, b_req, c_req, cycles);
+    $display("%0d,%0d,%0d,%0d,%0d,%0d", size, a_req, b_req, c_req, cycles, all);
 end
 endtask
 
 initial begin
-    $display("size,a_req,b_req,c_req,cycles");
-    count_cycles = 1'b0;
     reset_n = 1'b0;
+    $display("size,a_req,b_req,c_req,matrix_cycles,cycles");
+    //n = 'd0;
+    //m = 'd0;
+    //p = 'd0;
+    count_cycles = 1'b0;
+    count_all = 1'b0;
     start = 1'b0;
     @(posedge clk);
     @(posedge clk);

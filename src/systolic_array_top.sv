@@ -32,7 +32,7 @@ module systolic_array_top #(
 localparam MEM_DATA_WIDTH_BYTES     = 32;
 localparam BUFFER_ADDRESS_WIDTH     = 16;
 localparam ADDRESS_WIDTH            = 16;
-localparam MEM_FIFO_DEPTH           = 8192;
+localparam MEM_FIFO_DEPTH           = 16384;
 localparam MEM_ADDR_WIDTH           = `MEM_ADDR_WIDTH;
 localparam MEM_SIZE                 = 1 << MEM_ADDR_WIDTH;
 localparam A_MEM_BANK_DATA_WIDTH    = ARRAY_HEIGHT * DATA_WIDTH_BYTES * 8;
