@@ -155,9 +155,16 @@ result_shift_lane #(
     end
 endgenerate
 
+generate
+    if ( ARRAY_HEIGHT != 1 ) begin
 always_ff @( posedge clk or negedge reset_n )
     if ( ~reset_n )                         output_cnt <= 'd0;              else
     if ( valid_result[output_cnt] )         output_cnt <= output_cnt + 1'b1;
+    end else begin
+always_ff @( posedge clk or negedge reset_n )
+    if ( ~reset_n )                         output_cnt <= 'd0;        
+    end
+endgenerate
 
 assign data_o   = lanes_output[output_cnt];
 assign valid_o  = valid_result[output_cnt];

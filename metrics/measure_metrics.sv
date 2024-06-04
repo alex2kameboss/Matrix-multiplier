@@ -12,11 +12,11 @@ end
 `endif
 
 `ifndef A_WIDTH
-    `define A_WIDTH 16
+    `define A_WIDTH 1
 `endif
 
 `ifndef A_HEIGHT
-    `define A_HEIGHT 16
+    `define A_HEIGHT 1
 `endif
 
 systolic_array_top #(
@@ -97,10 +97,10 @@ begin
 
     @(posedge dut.start_array);
     count_cycles <= 1'b1;
-    @(posedge dut.array_done);
-    count_cycles <= 1'b0;
+    //@(posedge dut.array_done);
 
     @(posedge dut.ooperation_done_c_bus);
+    count_cycles <= 1'b0;
     count_all = 1'b0;
     @(posedge clk);
     @(posedge clk);

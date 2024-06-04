@@ -51,7 +51,9 @@ always_ff @( posedge clk or negedge reset_n )
 logic   [15 : 0]                        relative_addr, row_m, row_m_1, col_m, col_m_1;
 logic   [15 : 0]                        row_intrmediate, col_intermidiate;
 logic   [31 : 0]                        row_base;
-logic   [$clog2(ARRAY_HEIGHT) - 1 : 0]  row, row_1;
+
+logic   [0 : 0]                         row, row_1;
+
 logic   [$clog2(ARRAY_WIDTH) - 1 : 0]   col, col_1;
 logic                                   matrix_done, matrix_col_done, matrix_row_done;
 logic                                   row_done, col_done;
@@ -60,9 +62,9 @@ localparam COL_STEP = BUS_WIDTH_BYTES / DATA_WIDTH_BYTES;
 
 assign row_1            = row + 1'b1;
 assign col_1            = col + COL_STEP;
-assign matrix_row_done  = ~|row_1;
+assign matrix_row_done  = 1'b1;
 assign matrix_col_done  = ~|col_1;
-assign matrix_done      = matrix_col_done & matrix_row_done;
+assign matrix_done      = 1'b1;
 assign row_m_1          = row_m + ARRAY_HEIGHT;
 assign col_m_1          = col_m + ARRAY_WIDTH;
 assign row_done         = row_m_1 == m;
@@ -121,7 +123,7 @@ add #(
     .DATA_WIDTH(16)
 ) row_add (
     .a( row_m            ),
-    .b( {{16 - $clog2(ARRAY_HEIGHT){1'b0}}, row}       ),
+    .b( {{15{1'b0}}, row}       ),
     .c( row_intrmediate  )
 );
 

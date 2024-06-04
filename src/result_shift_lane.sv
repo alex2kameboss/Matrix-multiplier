@@ -24,6 +24,9 @@ logic   [BUS_WIDTH - 1  : 0]                data [REPLICATION - 1 : 0];
 logic                                       delay;
 logic   [$clog2(REPLICATION) - 1 : 0]       w_ptr, r_ptr;
 logic   [REPLICATION - 1 : 0]               valid;
+logic                                       incr;
+
+assign incr = valid_i & &cnt[$clog2(COUNTER) - 1 : 1] & ~cnt[0];
 
 assign  valid_i     = ~&packed_reset_n;
 assign  data_o      = data[r_ptr];
@@ -50,7 +53,7 @@ always_ff @( posedge clk or negedge reset_n )
 
 always_ff @( posedge clk or negedge reset_n )
     if ( ~reset_n )                     valid[j] <= 1'b0;           else
-    if ( w_ptr == j & &cnt )            valid[j] <= 1'b1;           else
+    if ( w_ptr == j & incr  )           valid[j] <= 1'b1;           else
     if ( r_ptr == j & accepted_i )      valid[j] <= 1'b0;
     end
 endgenerate
@@ -61,7 +64,7 @@ always_ff @( posedge clk or negedge reset_n )
 
 always_ff @( posedge clk or negedge reset_n )
     if ( ~reset_n )                     w_ptr <= 'd0;            else
-    if ( &cnt )                         w_ptr <= w_ptr + 1'b1;
+    if ( incr )                         w_ptr <= w_ptr + 1'b1;
 
 always_ff @( posedge clk or negedge reset_n )
     if ( ~reset_n )                     r_ptr <= 'd0;            else
